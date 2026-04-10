@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyCAD 0.0.0</title>
+</head>
+
+<body>
+  <div id="header">
+    <h2>EasyCAD 0.0.0</h2>
+    <div id="toolbar">
+      <div id="tools" class="container">
+        <button class="tool" id="move">Move</button>
+        <button class="tool" id="scale">Scale</button>
+        <button class="tool" id="rotate">Rotate</button>
+      </div>
+      <div id="primatives" class="container">
+        <button class="primitive" id="cube">Cube</button>
+        <button class="primitive" id="sphere">Sphere</button>
+        <button class="primitive" id="cylinder">Cyllinder</button>
+      </div>
+      <div id="modifiers" class="container">
+        <button class="modifier" id="merge">Merge</button>
+        <button class="modifier" id="subtract">Subtract</button>
+        <button class="modifier" id="intersect">Intersect</button>
+      </div>
+    </div>
+    <button id="export">↓ Export Selected STLs</button>
+  </div>
+
+  <canvas id="bg"></canvas>
+
+  <footer id="footer">
+    <p id="statement">EasyCAD 2026 All Rights Reserved</p>
+    <p id="selected">Nothing selected</p>
+  </footer>
+
+  <script type="module" src="/main.js"></script>
+</body>
+
+</html>
