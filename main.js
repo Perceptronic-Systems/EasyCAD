@@ -3,7 +3,7 @@ import './style.css';
 
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+//import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
@@ -15,7 +15,7 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
 const scene = new THREE.Scene();
 const canvas = document.querySelector('#bg');
-const gridHelper = new THREE.GridHelper(250, 25);
+const gridHelper = new THREE.GridHelper(260, 26);
 scene.add(gridHelper);
 let width = canvas.offsetWidth;
 let height = canvas.offsetHeight;
@@ -25,24 +25,20 @@ let height = canvas.offsetHeight;
 const frustumSize = 40;
 const aspectRatio = width / height;
 
-let orthographic = false;
-
-let camera = new THREE.OrthographicCamera(
+const orthoCamera = new THREE.OrthographicCamera(
   (frustumSize * aspectRatio) / -2,
   (frustumSize * aspectRatio) / 2,
   frustumSize / 2,
   frustumSize / -2,
   -1000,
   1000);
+const perspCamera = new THREE.PerspectiveCamera(frustumSize * 2, aspectRatio, 0.001, 1000);
+perspCamera.position.set(25, 60, -75)
+perspCamera.lookAt(0, 0, 0);
+orthoCamera.position.copy(perspCamera.position);
+orthoCamera.quaternion.copy(perspCamera.quaternion);
 
-if (orthographic == false) {
-  camera = new THREE.PerspectiveCamera(frustumSize * 2, aspectRatio, 0.001, 1000);
-  camera.position.set(25, 60, -75)
-  camera.lookAt(0, 0, 0);
-} else {
-  camera.position.set(1, 1, 1);
-  camera.lookAt(0, 0, 0);
-}
+let camera = orthoCamera;
 
 // Rendering
 const renderer = new THREE.WebGLRenderer({
@@ -74,13 +70,12 @@ function handleResize() {
   width = canvas.offsetWidth;
   height = canvas.offsetHeight;
   const aspect = width / height;
-  camera.aspect = aspect;
-  if (orthographic) {
-    camera.left = - frustumSize * aspect;
-    camera.right = frustumSize * aspect;
-    camera.top = frustumSize;
-    camera.bottom = - frustumSize;
-  }
+  orthoCamera.aspect = aspect;
+  perspCamera.aspect = aspect;
+  orthoCamera.left = - frustumSize * aspect;
+  orthoCamera.right = frustumSize * aspect;
+  orthoCamera.top = frustumSize;
+  orthoCamera.bottom = - frustumSize;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
   composer.setSize(width, height);
@@ -91,12 +86,83 @@ window.addEventListener('resize', handleResize);
 handleResize();
 
 // Controls
-const controls = new OrbitControls(camera, renderer.domElement);
+class orbitControls {
+  constructor(cam, domElement) {
+    this.active = true;
+    this.cam = cam;
+    this.domElement = domElement;
+    this.target = new THREE.Vector3(0, 0, 0);
+    this.sensitivity = 0.005;
+    this.panSpeed = 0.08;
+    this.zoomFactor = 0.1;
+    this.zoomStart = 0;
+    this.radius = 50;
+    this.theta = 0.5; // Horizontal orbit
+    this.phi = 1.000; // Vertical orbit
+    this.isDragging = false;
+    this.prevMouse = { x: 0.00, y: 0.00 };
+    this.initListeners();
+    if (this.cam.isOrthographicCamera) {
+      this.zoom();
+    }
+    this.update();
+    this.domElement.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+    });
+  }
+  initListeners() {
+    this.domElement.addEventListener('mousedown', (e) => {
+      this.mouseButton = e.button;
+      this.isDragging = true;
+      this.prevMouse = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!this.isDragging || !this.active) return;
+      const deltaX = e.clientX - this.prevMouse.x;
+      const deltaY = e.clientY - this.prevMouse.y;
+      if (this.mouseButton === 0) {
+        this.theta += deltaX * this.sensitivity;
+        this.phi -= deltaY * this.sensitivity;
+      } else if (this.mouseButton === 2) {
+        const matrix = new THREE.Matrix4()
+        matrix.extractRotation(this.cam.matrix);
+        const left = new THREE.Vector3(-1, 0, 0).applyMatrix4(matrix);
+        const up = new THREE.Vector3(0, 1, 0).applyMatrix4(matrix);
+        this.target.addScaledVector(left, (deltaX * this.panSpeed) / this.cam.zoom);
+        this.target.addScaledVector(up, (deltaY * this.panSpeed) / this.cam.zoom);
+      }
+      this.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.phi));
+      this.prevMouse = { x: e.clientX, y: e.clientY };
+      this.update();
+    });
+    window.addEventListener('mouseup', () => this.isDragging = false);
+    this.domElement.addEventListener('wheel', (e) => {
+      this.radius = Math.max(1, Math.min(600, this.radius + (e.deltaY * 0.05 * this.zoomFactor) * this.radius / 10));
+      scene.add(gridHelper);
+      if (this.cam.isOrthographicCamera) {
+        this.zoom();
+      }
+      this.update();
+    });
+  }
+  zoom() {
+    this.cam.zoom = (1 / (((this.radius) * this.zoomFactor) + this.zoomStart)) + 0.05;
+    console.log('radius: ' + this.radius + '\nzoom: ' + this.cam.zoom);
+  }
+  update() {
+    const x = this.radius * Math.sin(this.phi) * Math.cos(this.theta);
+    const y = this.radius * Math.cos(this.phi);
+    const z = this.radius * Math.sin(this.phi) * Math.sin(this.theta);
+    this.cam.position.set(this.target.x + x, this.target.y + y, this.target.z + z);
+    this.cam.lookAt(this.target);
+    this.cam.updateProjectionMatrix();
+  }
+}
+const controls = new orbitControls(camera, canvas);
 const transformControls = new TransformControls(camera, renderer.domElement);
-transformControls.addEventListener('dragging-changed', (event) => {
-  controls.enabled = !event.value;
-});
-transformControls.addEventListener('change', () => composer.render());
+transformControls.addEventListener('dragging-changed', (e) => {
+  controls.active = !e.value;
+})
 const transformGizmo = transformControls.getHelper()
 scene.add(transformGizmo);
 
@@ -113,7 +179,7 @@ scene.add(directionalLightB);
 
 // Primitive Functionality
 const default_material = new THREE.MeshStandardMaterial({ color: 0xf25050 });
-function createPrimitive(name, shape, size, position, material, selectOnFinish = true) {
+function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
   let mesh = null;
   if (shape == "cube" && size.length === 3) {
     mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
@@ -336,6 +402,8 @@ const cylinderButton = document.querySelector("#cylinder");
 cylinderButton.addEventListener("click", () => {
   createPrimitive("Cylinder", "cylinder", [10, 10, 20], [0, 10, 0], default_material);
 });
+
+createPrimitive('Cube 1', 'cube', [20, 20, 20], [0, 10, 0], default_material)
 
 function animate() {
   requestAnimationFrame(animate);

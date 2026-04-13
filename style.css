@@ -17,7 +17,7 @@
 button {
   background: #2f4e70;
   border-style: none;
-  border-radius: 0.8rem;
+  border-radius: 0.35rem;
   padding: 0.7rem;
   margin: 0.5rem;
 }
@@ -28,6 +28,34 @@ button:hover {
 
 button:active {
   background: #2a66a6;
+}
+
+.tool {
+  background-color: transparent;
+  color: rgb(68, 227, 68);
+}
+
+#move {}
+
+.primitive {
+  background-color: transparent;
+  color: rgb(68, 150, 227);
+}
+
+.modifier {
+  background-color: transparent;
+}
+
+#merge {
+  color: cyan;
+}
+
+#subtract {
+  color: rgb(235, 46, 46);
+}
+
+#intersect {
+  color: rgb(246, 113, 253);
 }
 
 #export {
