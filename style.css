@@ -35,8 +35,6 @@ button:active {
   color: rgb(68, 227, 68);
 }
 
-#move {}
-
 .primitive {
   background-color: transparent;
   color: rgb(68, 150, 227);
@@ -127,5 +125,12 @@ canvas {
 #statement {
   font-size: 9pt;
   color: grey;
+  float: left;
+  margin-left: 5rem;
+}
+
+#camera-type {
+  padding: 0px;
+  margin: 0px;
   float: left;
 }

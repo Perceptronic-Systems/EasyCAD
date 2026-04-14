@@ -15,6 +15,8 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
 const scene = new THREE.Scene();
 const canvas = document.querySelector('#bg');
+const camSelector = document.querySelector('#cam-switch');
+camSelector.checked = true;
 const gridHelper = new THREE.GridHelper(260, 26);
 scene.add(gridHelper);
 let width = canvas.offsetWidth;
@@ -40,6 +42,10 @@ orthoCamera.quaternion.copy(perspCamera.quaternion);
 
 let camera = orthoCamera;
 
+camSelector.addEventListener('change', () => {
+  setCameraType();
+});
+
 // Rendering
 const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
@@ -52,9 +58,9 @@ renderer.setClearColor(0x000000, 0);
 
 // Post Processing Effects
 const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
+let renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
-const outlinePass = new OutlinePass(
+let outlinePass = new OutlinePass(
   new THREE.Vector2(width, height),
   scene,
   camera
@@ -64,6 +70,29 @@ outlinePass.edgeGlow = 1.0;
 outlinePass.visibleEdgeColor.set('#baf5f8');
 composer.addPass(outlinePass);
 composer.setPixelRatio(window.devicePixelRatio);
+
+// View Selection
+function setCameraType() {
+  if (camSelector.checked) {
+    camera = orthoCamera;
+    camera.position.copy(perspCamera.position);
+  } else {
+    camera = perspCamera;
+    camera.position.copy(orthoCamera.position);
+    camera.zoom = 1;
+  }
+  renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  outlinePass = new OutlinePass(
+    new THREE.Vector2(width, height),
+    scene,
+    camera
+  );
+  composer.addPass(outlinePass);
+  controls.cam = camera;
+  controls.update();
+  handleResize();
+}
 
 // Resizing
 function handleResize() {
@@ -139,15 +168,11 @@ class orbitControls {
     this.domElement.addEventListener('wheel', (e) => {
       this.radius = Math.max(1, Math.min(600, this.radius + (e.deltaY * 0.05 * this.zoomFactor) * this.radius / 10));
       scene.add(gridHelper);
-      if (this.cam.isOrthographicCamera) {
-        this.zoom();
-      }
       this.update();
     });
   }
   zoom() {
     this.cam.zoom = (1 / (((this.radius) * this.zoomFactor) + this.zoomStart)) + 0.05;
-    console.log('radius: ' + this.radius + '\nzoom: ' + this.cam.zoom);
   }
   update() {
     const x = this.radius * Math.sin(this.phi) * Math.cos(this.theta);
@@ -155,6 +180,9 @@ class orbitControls {
     const z = this.radius * Math.sin(this.phi) * Math.sin(this.theta);
     this.cam.position.set(this.target.x + x, this.target.y + y, this.target.z + z);
     this.cam.lookAt(this.target);
+    if (this.cam.isOrthographicCamera) {
+      this.zoom();
+    }
     this.cam.updateProjectionMatrix();
   }
 }
