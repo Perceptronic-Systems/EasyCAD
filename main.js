@@ -123,17 +123,15 @@ class orbitControls {
     this.target = new THREE.Vector3(0, 0, 0);
     this.sensitivity = 0.005;
     this.panSpeed = 0.08;
-    this.zoomFactor = 0.1;
-    this.zoomStart = 0;
+    this.zoomSpeed = 0.1;
+    this.zoomFactor = 80;
+    this.zoomStart = -0.05;
     this.radius = 50;
     this.theta = 0.5; // Horizontal orbit
     this.phi = 1.000; // Vertical orbit
     this.isDragging = false;
     this.prevMouse = { x: 0.00, y: 0.00 };
     this.initListeners();
-    if (this.cam.isOrthographicCamera) {
-      this.zoom();
-    }
     this.update();
     this.domElement.addEventListener('contextmenu', (event) => {
       event.preventDefault();
@@ -166,13 +164,13 @@ class orbitControls {
     });
     window.addEventListener('mouseup', () => this.isDragging = false);
     this.domElement.addEventListener('wheel', (e) => {
-      this.radius = Math.max(1, Math.min(600, this.radius + (e.deltaY * 0.05 * this.zoomFactor) * this.radius / 10));
+      this.radius = Math.max(1, Math.min(600, this.radius + (e.deltaY * 0.05 * this.zoomSpeed) * this.radius / 10));
       scene.add(gridHelper);
       this.update();
     });
   }
   zoom() {
-    this.cam.zoom = (1 / (((this.radius) * this.zoomFactor) + this.zoomStart)) + 0.05;
+    this.cam.zoom = 1 / (this.radius / this.zoomFactor) + this.zoomStart;
   }
   update() {
     const x = this.radius * Math.sin(this.phi) * Math.cos(this.theta);
@@ -182,6 +180,8 @@ class orbitControls {
     this.cam.lookAt(this.target);
     if (this.cam.isOrthographicCamera) {
       this.zoom();
+    } else {
+      this.cam.zoom = 1;
     }
     this.cam.updateProjectionMatrix();
   }
@@ -206,6 +206,7 @@ scene.add(directionalLightB);
 
 
 // Primitive Functionality
+const objects = {};
 const default_material = new THREE.MeshStandardMaterial({ color: 0xf25050 });
 function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
   let mesh = null;
@@ -227,12 +228,14 @@ function createPrimitive(name, shape, size, position = [0, 0, 0], material = def
   }
   mesh.name = tempName;
   scene.add(mesh);
+  objects[tempName] = shape;
   if (selectOnFinish) selectObject(tempName);
   return mesh;
 }
 function removeObject(objectName) {
   const mesh = scene.getObjectByName(objectName);
   scene.remove(mesh);
+  delete objects[objectName];
   if (mesh.geometry) mesh.geometry.dispose();
   mesh.material = null;
 }
@@ -274,13 +277,12 @@ function onMouseClick(event) {
 const raycaster = new THREE.Raycaster();
 function raycast() {
   raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh), true); 1
+  const intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && Object.keys(objects).includes(child.name)), true);
   if (intersects.length > 0) {
     const hit = intersects[0].object;
-    if (hit.name != "") {
-      selectObject(hit.name, shiftDown);
-    }
+    selectObject(hit.name, shiftDown);
   }
+  //scene.add(new THREE.ArrowHelper(raycaster.ray.direction, raycaster.ray.origin, 600, 0xff0000));
 }
 window.addEventListener('click', onMouseClick);
 
@@ -415,6 +417,7 @@ function booleanOperation(operation, objectA, objectB, resultName) {
   removeObject(objectB);
   result.name = resultName;
   scene.add(result);
+  objects[resultName] = 'composite_part';
   selectObject(resultName);
 }
 
