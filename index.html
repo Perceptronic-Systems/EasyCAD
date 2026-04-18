@@ -9,40 +9,47 @@
 </head>
 
 <body>
-  <div id="header">
-    <h2>EasyCAD 0.0.0</h2>
-    <div id="toolbar">
-      <div id="tools" class="container">
-        <button class="tool" id="move">Move</button>
-        <button class="tool" id="scale">Scale</button>
-        <button class="tool" id="rotate">Rotate</button>
+  <div id="main">
+    <div id="header">
+      <h2 class="logo">EasyCAD 0.0.0</h2>
+      <div id="toolbar">
+        <div id="tools" class="container">
+          <button class="tool" id="move">Move</button>
+          <button class="tool" id="scale">Scale</button>
+          <button class="tool" id="rotate">Rotate</button>
+        </div>
+        <div id="primatives" class="container">
+          <button class="primitive" id="cube">Cube</button>
+          <button class="primitive" id="sphere">Sphere</button>
+          <button class="primitive" id="cylinder">Cyllinder</button>
+        </div>
+        <div id="modifiers" class="container">
+          <button class="modifier" id="merge">Merge</button>
+          <button class="modifier" id="subtract">Subtract</button>
+          <button class="modifier" id="intersect">Intersect</button>
+        </div>
       </div>
-      <div id="primatives" class="container">
-        <button class="primitive" id="cube">Cube</button>
-        <button class="primitive" id="sphere">Sphere</button>
-        <button class="primitive" id="cylinder">Cyllinder</button>
-      </div>
-      <div id="modifiers" class="container">
-        <button class="modifier" id="merge">Merge</button>
-        <button class="modifier" id="subtract">Subtract</button>
-        <button class="modifier" id="intersect">Intersect</button>
-      </div>
+      <button id="export">🢳 Export Selected STLs</button>
     </div>
-    <button id="export">🢳 Export Selected STLs</button>
+
+    <div id="viewport">
+      <canvas id="bg"></canvas>
+
+      <div class="overlay" id="editor-controls"></div>
+    </div>
+
+
+    <footer id="footer">
+      <p id="selected">Nothing selected</p>
+      <div id="camera-type">
+        <input type='checkbox' id="cam-switch">
+        <p>Orthographic</p>
+      </div>
+      <p id="statement">EasyCAD 2026 All Rights Reserved</p>
+    </footer>
+
+    <script type="module" src="/main.js"></script>
   </div>
-
-  <canvas id="bg"></canvas>
-
-  <footer id="footer">
-    <p id="selected">Nothing selected</p>
-    <div id="camera-type">
-      <input type='checkbox' id="cam-switch">
-      <p>Orthographic</p>
-    </div>
-    <p id="statement">EasyCAD 2026 All Rights Reserved</p>
-  </footer>
-
-  <script type="module" src="/main.js"></script>
 </body>
 
 </html>

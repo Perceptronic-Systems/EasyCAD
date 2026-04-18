@@ -3,9 +3,10 @@ import './style.css';
 
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
-//import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
@@ -65,10 +66,12 @@ let outlinePass = new OutlinePass(
   scene,
   camera
 );
-outlinePass.edgeStrength = 1.6;
-outlinePass.edgeGlow = 1.0;
-outlinePass.visibleEdgeColor.set('#baf5f8');
+outlinePass.edgeStrength = 1.5;
+outlinePass.edgeGlow = 0.0;
+outlinePass.visibleEdgeColor.set('#d2fdff');
 composer.addPass(outlinePass);
+const gammaPass = new ShaderPass(GammaCorrectionShader);
+composer.addPass(gammaPass);
 composer.setPixelRatio(window.devicePixelRatio);
 
 // View Selection
@@ -207,7 +210,7 @@ scene.add(directionalLightB);
 
 // Primitive Functionality
 const objects = {};
-const default_material = new THREE.MeshStandardMaterial({ color: 0xf25050 });
+const default_material = new THREE.MeshStandardMaterial({ color: 0xD4A94A });
 function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
   let mesh = null;
   if (shape == "cube" && size.length === 3) {
@@ -286,6 +289,61 @@ function raycast() {
 }
 window.addEventListener('click', onMouseClick);
 
+// Editor controls functionality
+const editorControls = document.querySelector("#editor-controls");
+editorControls.style.display = 'None';
+function setEditor(content_items) {
+  editorControls.innerHTML = "";
+  for (const item of content_items) {
+    let domElement;
+    if (item.element == "property") {
+      domElement = document.createElement('div')
+      domElement.classList.add('row');
+      const label = document.createElement('label');
+      const value = document.createElement('input');
+      label.innerHTML = item.content;
+      value.id = item.id;
+      value.value = item.defaultValue;
+      domElement.appendChild(label);
+      domElement.appendChild(value);
+    } else if (item.element == "checkbox") {
+      domElement = document.createElement('div')
+      domElement.classList.add('row');
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = item.id;
+      checkbox.value = item.defaultValue;
+      domElement.appendChild(label);
+      domElement.appendChild(checkbox);
+    } else if (item.element == "confirmation") {
+      domElement = document.createElement('div')
+      domElement.classList.add('row');
+      const cancel = document.createElement('button');
+      const apply = document.createElement('button');
+      cancel.id = 'cancel';
+      cancel.innerHTML = "Cancel";
+      apply.id = item.id;
+      apply.classList.add('apply');
+      apply.innerHTML = "Apply";
+      domElement.appendChild(cancel);
+      domElement.appendChild(apply);
+    } else {
+      domElement = document.createElement(item.element);
+      if (item.id) domElement.id = item.id;
+      if (item.class) domElement.classList.add(item.class);
+      domElement.innerHTML = item.content;
+    }
+    editorControls.appendChild(domElement);
+  }
+  editorControls.style.display = 'flex';
+}
+
+function hideEditor() {
+  editorControls.hidden = true;
+  editorControls.innerHTML = "";
+}
+
 // Tool Functionality
 let activeTool = null;
 const moveButton = document.querySelector("#move");
@@ -300,19 +358,46 @@ function setTool(tool) {
   if (activeTool != tool && selection.length > 0) {
     activeTool = tool;
     transformControls.detach();
+    const mainSelection = Object.values(selectedObjects)[0];
     switch (tool) {
       case "move":
         transformControls.setMode('translate');
+        setEditor([{ element: 'div', content: "Move Object" },
+        { element: 'property', content: "Snap amount", id: "snap_amount", defaultValue: 0.1 },
+        { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x },
+        { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y },
+        { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z },
+        { element: 'confirmation', id: 'apply-pos' }
+        ]);
         break;
       case "scale":
         transformControls.setMode('scale');
+        setEditor([{ element: 'div', content: "Scale Object" },
+        { element: 'property', content: "Snap amount", id: "snap_amount", defaultValue: 0.1 },
+        { element: 'property', content: "X", id: "scale-x", defaultValue: mainSelection.scale.x },
+        { element: 'property', content: "Y", id: "scale-y", defaultValue: mainSelection.scale.y },
+        { element: 'property', content: "Z", id: "scale-z", defaultValue: mainSelection.scale.z },
+        { element: 'confirmation', id: 'apply-scale' }
+        ]);
         break;
       case "rotate":
         transformControls.setMode('rotate');
+        setEditor([{ element: 'div', content: "Rotate Object" },
+        { element: 'property', content: "Snap amount", id: "snap_rotation_amount", defaultValue: 15 },
+        { element: 'property', content: "X", id: "rot-x", defaultValue: mainSelection.rotation.x },
+        { element: 'property', content: "Y", id: "rot-y", defaultValue: mainSelection.rotation.y },
+        { element: 'property', content: "Z", id: "rot-z", defaultValue: mainSelection.rotation.z },
+        { element: 'confirmation', id: 'apply-rot' }
+        ]);
         break
     }
     transformControls.attach(selection[0]);
   }
+}
+function unselectTool() {
+  activeTool = null;
+  transformControls.detach();
+  hideEditor();
 }
 moveButton.addEventListener("click", () => {
   setTool('move');
@@ -349,8 +434,7 @@ let shiftDown = false;
 document.addEventListener('keydown', (event) => {
   switch (event.key) {
     case "Escape":
-      transformControls.detach();
-      activeTool = null;
+      unselectTool()
       break;
     case 'Shift':
       shiftDown = true;
@@ -376,6 +460,44 @@ document.addEventListener('keydown', (event) => {
 });
 document.addEventListener('keyup', (event) => {
   if (event.key === 'Shift') shiftDown = false;
+});
+document.addEventListener('click', function (event) {
+  if (event.target) {
+    switch (event.target.id) {
+      case 'cancel':
+        unselectTool();
+        break;
+      case 'apply-pos':
+        const x_pos = document.querySelector('#pos-x').value;
+        const y_pos = document.querySelector('#pos-y').value;
+        const z_pos = document.querySelector('#pos-z').value;
+        const newPos = new THREE.Vector3(x_pos, y_pos, z_pos);
+        for (const mesh of Object.values(selectedObjects)) {
+          mesh.position.copy(newPos);
+        }
+        unselectTool();
+        break;
+      case 'apply-scale':
+        const x_scale = document.querySelector('#scale-x').value;
+        const y_scale = document.querySelector('#scale-y').value;
+        const z_scale = document.querySelector('#scale-z').value;
+        const newScale = new THREE.Vector3(x_scale, y_scale, z_scale);
+        for (const mesh of Object.values(selectedObjects)) {
+          mesh.scale.copy(newScale);
+        }
+        unselectTool();
+        break;
+      case 'apply-rot':
+        const x_rot = document.querySelector('#rot-x').value;
+        const y_rot = document.querySelector('#rot-y').value;
+        const z_rot = document.querySelector('#rot-z').value;
+        for (const mesh of Object.values(selectedObjects)) {
+          mesh.rotation.set(x_rot, y_rot, z_rot);
+        }
+        unselectTool();
+        break;
+    }
+  }
 });
 
 function deselectObjects() {
