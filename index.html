@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyCAD 0.0.0</title>
+  <script type="module" crossorigin src="/EasyCAD/assets/index-CieJyJv7.js"></script>
+  <link rel="stylesheet" crossorigin href="/EasyCAD/assets/index-Btj5glPl.css">
+</head>
+
+<body>
+  <div id="main">
+    <div id="header">
+      <h2 class="logo">EasyCAD 0.0.0</h2>
+      <div id="toolbar">
+        <div id="tools" class="container">
+          <button class="tool" id="move">Move</button>
+          <button class="tool" id="scale">Scale</button>
+          <button class="tool" id="rotate">Rotate</button>
+        </div>
+        <div id="primatives" class="container">
+          <button class="primitive" id="cube">Cube</button>
+          <button class="primitive" id="sphere">Sphere</button>
+          <button class="primitive" id="cylinder">Cyllinder</button>
+        </div>
+        <div id="modifiers" class="container">
+          <button class="modifier" id="merge">Merge</button>
+          <button class="modifier" id="subtract">Subtract</button>
+          <button class="modifier" id="intersect">Intersect</button>
+        </div>
+      </div>
+      <button id="export">🢳 Export Selected STLs</button>
+    </div>
+
+    <div id="viewport">
+      <canvas id="bg"></canvas>
+
+      <div class="overlay" id="editor-controls"></div>
+    </div>
+
+
+    <footer id="footer">
+      <p id="selected">Nothing selected</p>
+      <div id="camera-type">
+        <input type='checkbox' id="cam-switch">
+        <p>Orthographic</p>
+      </div>
+      <p id="statement">EasyCAD 2026 All Rights Reserved</p>
+    </footer>
+
+  </div>
+</body>
+
+</html>
