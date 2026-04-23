@@ -191,9 +191,49 @@ class orbitControls {
 }
 const controls = new orbitControls(camera, canvas);
 const transformControls = new TransformControls(camera, renderer.domElement);
+transformControls.setTranslationSnap(5);
+transformControls.setScaleSnap(0.5);
+transformControls.setRotationSnap(Math.PI / 8);
 transformControls.addEventListener('dragging-changed', (e) => {
   controls.active = !e.value;
-})
+});
+transformControls.addEventListener('change', (e) => {
+  if (editorControls.innerHTML != "") {
+    const mainSelection = Object.values(selectedObjects)[0];
+    switch (activeTool) {
+      case "move":
+        const x_pos = editorControls.querySelector('#pos-x');
+        const y_pos = editorControls.querySelector('#pos-y');
+        const z_pos = editorControls.querySelector('#pos-z');
+        const pos_snap = editorControls.querySelector('#snap_pos_amount');
+        transformControls.setTranslationSnap(pos_snap.value);
+        x_pos.value = mainSelection.position.x;
+        y_pos.value = mainSelection.position.y;
+        z_pos.value = mainSelection.position.z;
+        break;
+      case "scale":
+        const x_scale = editorControls.querySelector('#scale-x');
+        const y_scale = editorControls.querySelector('#scale-y');
+        const z_scale = editorControls.querySelector('#scale-z');
+        const scale_snap = editorControls.querySelector('#snap_scale_amount');
+        transformControls.setScaleSnap(scale_snap.value);
+        x_scale.value = mainSelection.scale.x;
+        y_scale.value = mainSelection.scale.y;
+        z_scale.value = mainSelection.scale.z;
+        break;
+      case "rotate":
+        const x_rot = editorControls.querySelector('#rot-x');
+        const y_rot = editorControls.querySelector('#rot-y');
+        const z_rot = editorControls.querySelector('#rot-z');
+        const rot_snap = editorControls.querySelector('#snap_rotation_amount');
+        transformControls.setRotationSnap(rot_snap.value);
+        x_rot.value = mainSelection.rotation.x;
+        y_rot.value = mainSelection.rotation.y;
+        z_rot.value = mainSelection.rotation.z;
+        break;
+    }
+  }
+});
 const transformGizmo = transformControls.getHelper()
 scene.add(transformGizmo);
 
@@ -210,7 +250,7 @@ scene.add(directionalLightB);
 
 // Primitive Functionality
 const objects = {};
-const default_material = new THREE.MeshStandardMaterial({ color: 0xD4A94A });
+const default_material = new THREE.MeshStandardMaterial({ color: 0x1b8237 });
 function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
   let mesh = null;
   if (shape == "cube" && size.length === 3) {
@@ -281,7 +321,7 @@ const raycaster = new THREE.Raycaster();
 function raycast() {
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && Object.keys(objects).includes(child.name)), true);
-  if (intersects.length > 0) {
+  if (intersects.length > 0 && activeTool == null) {
     const hit = intersects[0].object;
     selectObject(hit.name, shiftDown);
   }
@@ -293,7 +333,6 @@ window.addEventListener('click', onMouseClick);
 const editorControls = document.querySelector("#editor-controls");
 editorControls.style.display = 'None';
 function setEditor(content_items) {
-  editorControls.innerHTML = "";
   for (const item of content_items) {
     let domElement;
     if (item.element == "property") {
@@ -345,6 +384,9 @@ function hideEditor() {
 }
 
 // Tool Functionality
+let originPos = null;
+let originScale = null;
+let originRot = null;
 let activeTool = null;
 const moveButton = document.querySelector("#move");
 const scaleButton = document.querySelector("#scale");
@@ -354,41 +396,45 @@ const subtractButton = document.querySelector("#subtract");
 const intersectionButton = document.querySelector("#intersect");
 const exportButton = document.querySelector("#export");
 function setTool(tool) {
+  editorControls.innerHTML = "";
   const selection = Object.values(selectedObjects);
   if (activeTool != tool && selection.length > 0) {
     activeTool = tool;
     transformControls.detach();
     const mainSelection = Object.values(selectedObjects)[0];
+    originPos = mainSelection.position.clone();
+    originScale = mainSelection.scale.clone();
+    originRot = mainSelection.rotation.clone();
     switch (tool) {
       case "move":
-        transformControls.setMode('translate');
         setEditor([{ element: 'div', content: "Move Object" },
-        { element: 'property', content: "Snap amount", id: "snap_amount", defaultValue: 0.1 },
+        { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: transformControls.translationSnap },
         { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x },
         { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y },
         { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z },
         { element: 'confirmation', id: 'apply-pos' }
         ]);
+        transformControls.setMode('translate');
         break;
       case "scale":
-        transformControls.setMode('scale');
         setEditor([{ element: 'div', content: "Scale Object" },
-        { element: 'property', content: "Snap amount", id: "snap_amount", defaultValue: 0.1 },
+        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: transformControls.scaleSnap },
         { element: 'property', content: "X", id: "scale-x", defaultValue: mainSelection.scale.x },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: mainSelection.scale.y },
         { element: 'property', content: "Z", id: "scale-z", defaultValue: mainSelection.scale.z },
         { element: 'confirmation', id: 'apply-scale' }
         ]);
+        transformControls.setMode('scale');
         break;
       case "rotate":
-        transformControls.setMode('rotate');
         setEditor([{ element: 'div', content: "Rotate Object" },
-        { element: 'property', content: "Snap amount", id: "snap_rotation_amount", defaultValue: 15 },
+        { element: 'property', content: "Snap amount", id: "snap_rotation_amount", defaultValue: transformControls.rotationSnap },
         { element: 'property', content: "X", id: "rot-x", defaultValue: mainSelection.rotation.x },
         { element: 'property', content: "Y", id: "rot-y", defaultValue: mainSelection.rotation.y },
         { element: 'property', content: "Z", id: "rot-z", defaultValue: mainSelection.rotation.z },
         { element: 'confirmation', id: 'apply-rot' }
         ]);
+        transformControls.setMode('rotate');
         break
     }
     transformControls.attach(selection[0]);
@@ -461,11 +507,19 @@ document.addEventListener('keydown', (event) => {
 document.addEventListener('keyup', (event) => {
   if (event.key === 'Shift') shiftDown = false;
 });
+function cancelEdit() {
+  unselectTool()
+  const mainSelection = Object.values(selectedObjects)[0];
+  mainSelection.position.copy(originPos);
+  mainSelection.scale.copy(originScale);
+  mainSelection.rotation.copy(originRot);
+}
 document.addEventListener('click', function (event) {
   if (event.target) {
     switch (event.target.id) {
       case 'cancel':
-        unselectTool();
+        cancelEdit();
+
         break;
       case 'apply-pos':
         const x_pos = document.querySelector('#pos-x').value;
