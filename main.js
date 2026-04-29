@@ -310,8 +310,8 @@ function selectObject(object, keep = false) {
 
 // Raycasting
 const mouse = new THREE.Vector2();
-function onMouseClick(event) {
-  if (transformControls.dragging) return;
+function onMouseDown(event) {
+  if (transformControls.dragging || orbitControls.isDragging) return;
   const rect = canvas.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -325,9 +325,8 @@ function raycast() {
     const hit = intersects[0].object;
     selectObject(hit.name, shiftDown);
   }
-  //scene.add(new THREE.ArrowHelper(raycaster.ray.direction, raycaster.ray.origin, 600, 0xff0000));
 }
-window.addEventListener('click', onMouseClick);
+window.addEventListener('mousedown', onMouseDown);
 
 // Editor controls functionality
 const editorControls = document.querySelector("#editor-controls");
@@ -379,7 +378,7 @@ function setEditor(content_items) {
 }
 
 function hideEditor() {
-  editorControls.hidden = true;
+  editorControls.style.display = "none";
   editorControls.innerHTML = "";
 }
 
