@@ -79,6 +79,9 @@ button:active {
 #export {
   background: rgb(77, 77, 191);
   float: right;
+  display: flex;
+  justify-content: center;
+  align-content: center;
 }
 
 #export:hover {
@@ -110,6 +113,20 @@ h2.logo {
   margin-right: 2rem;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+#download-icon {
+  margin: 0px 5px 0px 5px;
+}
+
+#download-text {
+  margin: 3px 5px 0px 5px;
+}
+
+@media screen and (max-width: 750px) {
+  h2.logo, #download-text {
+    display: none;
+  }
 }
 
 canvas {
