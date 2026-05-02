@@ -59,9 +59,9 @@ renderer.setClearColor(0x000000, 0);
 
 // Post Processing Effects
 const composer = new EffectComposer(renderer);
-let renderPass = new RenderPass(scene, camera);
+const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
-let outlinePass = new OutlinePass(
+const outlinePass = new OutlinePass(
   new THREE.Vector2(width, height),
   scene,
   camera
@@ -84,14 +84,9 @@ function setCameraType() {
     camera.position.copy(orthoCamera.position);
     camera.zoom = 1;
   }
-  renderPass = new RenderPass(scene, camera);
-  composer.addPass(renderPass);
-  outlinePass = new OutlinePass(
-    new THREE.Vector2(width, height),
-    scene,
-    camera
-  );
-  composer.addPass(outlinePass);
+  renderPass.camera = camera;
+  outlinePass.renderCamera = camera;
+  camera.updateProjectionMatrix();
   controls.cam = camera;
   controls.update();
   handleResize();
@@ -574,9 +569,6 @@ document.addEventListener('click', function (event) {
         }
         unselectTool();
         break;
-    }
-    for (const mesh of Object.values(selectedObjects)) {
-      console.log(mesh.position);
     }
   }
 });
