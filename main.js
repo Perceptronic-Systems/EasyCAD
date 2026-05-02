@@ -100,8 +100,8 @@ function setCameraType() {
 
 // Resizing
 function handleResize() {
-  width = canvas.offsetWidth;
-  height = canvas.offsetHeight;
+  width = canvas.parentElement.offsetWidth;
+  height = canvas.parentElement.offsetHeight;
   const aspect = width / height;
   orthoCamera.aspect = aspect;
   perspCamera.aspect = aspect;
@@ -527,6 +527,50 @@ function cancelEdit() {
   mainSelection.scale.copy(originScale);
   mainSelection.rotation.copy(originRot);
 }
+
+function updateTransform() {
+  switch (activeTool) {
+    case 'move':
+      const x_pos = Number(document.querySelector('#pos-x').value) || 0;
+      const y_pos = Number(document.querySelector('#pos-y').value) || 0;
+      const z_pos = Number(document.querySelector('#pos-z').value) || 0;
+      translationSnap = Number(document.querySelector('#snap_pos_amount').value);
+      const newPos = new THREE.Vector3(x_pos, y_pos, z_pos);
+      for (const mesh of Object.values(selectedObjects)) {
+        mesh.position.copy(newPos);
+      }
+      break;
+    case 'scale':
+      const x_scale = Number(document.querySelector('#scale-x').value) || 0;
+      const y_scale = Number(document.querySelector('#scale-y').value) || 0;
+      const z_scale = Number(document.querySelector('#scale-z').value) || 0;
+      scaleSnap = Number(document.querySelector('#snap_scale_amount').value);
+      const newScale = new THREE.Vector3(x_scale, y_scale, z_scale);
+      for (const mesh of Object.values(selectedObjects)) {
+        mesh.position.copy(newScale);
+      }
+      break;
+    case 'rotate':
+      const x_rot = Number(document.querySelector('#rot-x').value) || 0;
+      const y_rot = Number(document.querySelector('#rot-y').value) || 0;
+      const z_rot = Number(document.querySelector('#rot-z').value) || 0;
+      rotationSnap = Number(document.querySelector('#snap_pos_amount').value);
+      const newRot = new THREE.Vector3(x_rot, y_rot, z_rot);
+      for (const mesh of Object.values(selectedObjects)) {
+        mesh.position.copy(newRot);
+      }
+      break;
+  }
+  transformControls.translationSnap = translationSnap;
+  transformControls.scaleSnap = scaleSnap;
+  transformControls.rotationSnap = rotationSnap;
+}
+
+editorControls.addEventListener('input', function (event) {
+  if (event.target) {
+    updateTransform();
+  }
+});
 document.addEventListener('click', function (event) {
   if (event.target) {
     switch (event.target.id) {
@@ -534,39 +578,8 @@ document.addEventListener('click', function (event) {
         cancelEdit();
 
         break;
-      case 'apply-pos':
-        const x_pos = Number(document.querySelector('#pos-x').value);
-        const y_pos = Number(document.querySelector('#pos-y').value);
-        const z_pos = Number(document.querySelector('#pos-z').value);
-        const snap_pos_amount = Number(document.querySelector('#snap_pos_amount').value);
-        translationSnap = snap_pos_amount;
-        const newPos = new THREE.Vector3(x_pos, y_pos, z_pos);
-        for (const mesh of Object.values(selectedObjects)) {
-          mesh.position.copy(newPos);
-        }
-        unselectTool();
-        break;
-      case 'apply-scale':
-        const x_scale = Number(document.querySelector('#scale-x').value);
-        const y_scale = Number(document.querySelector('#scale-y').value);
-        const z_scale = Number(document.querySelector('#scale-z').value);
-        const snap_scale_amount = Number(document.querySelector('#snap_scale_amount').value);
-        scaleSnap = snap_scale_amount;
-        const newScale = new THREE.Vector3(x_scale, y_scale, z_scale);
-        for (const mesh of Object.values(selectedObjects)) {
-          mesh.scale.copy(newScale);
-        }
-        unselectTool();
-        break;
-      case 'apply-rot':
-        const x_rot = Number(document.querySelector('#rot-x').value);
-        const y_rot = Number(document.querySelector('#rot-y').value);
-        const z_rot = Number(document.querySelector('#rot-z').value);
-        const snap_rot_amount = Number(document.querySelector('#snap_rot_amount').value);
-        rotationSnap = snap_rot_amount;
-        for (const mesh of Object.values(selectedObjects)) {
-          mesh.rotation.set(x_rot, y_rot, z_rot);
-        }
+      case 'apply-pos' || 'apply-scale' || 'apply-rot':
+        updateTransform();
         unselectTool();
         break;
     }

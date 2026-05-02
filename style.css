@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "AdwaitaMonoNerdFont";
+  src: url('./fonts/AdwaitaMonoNerdFont-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 * {
   color: white;
   font-family: Arial, Helvetica, sans-serif;
@@ -21,6 +28,11 @@ body {
   overflow: auto;
   display: flex;
   flex-direction: column;
+}
+
+#header {
+  display: flex;
+  flex-direction: row;
 }
 
 #header * {
@@ -48,6 +60,17 @@ button:hover {
 
 button:active {
   background: #2a66a6;
+}
+
+.tool, .primitive, .modifier {
+  width: 30%;
+  margin: 0.3rem 0rem 0.3rem 0rem;
+}
+
+.tool, .modifier {
+  font-family: 'AdwaitaMonoNerdFont';
+  font-size: 20px;
+  padding-right: 10%;
 }
 
 .tool {
@@ -94,15 +117,20 @@ button:active {
 
 .container {
   background-color: rgb(59, 62, 69);
-  margin-left: 1rem;
-  margin-right: 1rem;
+  margin-left: 5%;
+  margin-right: 1%;
   height: 100%;
+  width: 25%;
+  display:flex;
+  align-content: center;
+  justify-content: center;
 }
 
 #toolbar {
   padding: 0px;
   margin: 0px;
   height: 100%;
+  flex: 1;
 }
 
 h2.logo {
