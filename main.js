@@ -95,6 +95,12 @@ function setCameraType() {
   controls.cam = camera;
   controls.update();
   handleResize();
+  if (transformControls) {
+    const mode = transformControls.mode;
+    const selectedObject = transformControls.object;
+    deactivateTransformControls();
+    activateTransformControls(selectedObject, mode);
+  }
 }
 
 // Resizing
@@ -117,7 +123,7 @@ function handleResize() {
 window.addEventListener('resize', handleResize);
 handleResize();
 
-// Controls
+// Orbit Controls
 class orbitControls {
   constructor(cam, domElement) {
     this.active = true;
@@ -190,52 +196,67 @@ class orbitControls {
   }
 }
 const controls = new orbitControls(camera, canvas);
-const transformControls = new TransformControls(camera, renderer.domElement);
-transformControls.setTranslationSnap(5);
-transformControls.setScaleSnap(0.5);
-transformControls.setRotationSnap(Math.PI / 8);
-transformControls.addEventListener('dragging-changed', (e) => {
-  controls.active = !e.value;
-});
-transformControls.addEventListener('change', (e) => {
-  if (editorControls.innerHTML != "") {
-    const mainSelection = Object.values(selectedObjects)[0];
-    switch (activeTool) {
-      case "move":
-        const x_pos = editorControls.querySelector('#pos-x');
-        const y_pos = editorControls.querySelector('#pos-y');
-        const z_pos = editorControls.querySelector('#pos-z');
-        const pos_snap = editorControls.querySelector('#snap_pos_amount');
-        transformControls.setTranslationSnap(pos_snap.value);
-        x_pos.value = mainSelection.position.x;
-        y_pos.value = mainSelection.position.y;
-        z_pos.value = mainSelection.position.z;
-        break;
-      case "scale":
-        const x_scale = editorControls.querySelector('#scale-x');
-        const y_scale = editorControls.querySelector('#scale-y');
-        const z_scale = editorControls.querySelector('#scale-z');
-        const scale_snap = editorControls.querySelector('#snap_scale_amount');
-        transformControls.setScaleSnap(scale_snap.value);
-        x_scale.value = mainSelection.scale.x;
-        y_scale.value = mainSelection.scale.y;
-        z_scale.value = mainSelection.scale.z;
-        break;
-      case "rotate":
-        const x_rot = editorControls.querySelector('#rot-x');
-        const y_rot = editorControls.querySelector('#rot-y');
-        const z_rot = editorControls.querySelector('#rot-z');
-        const rot_snap = editorControls.querySelector('#snap_rotation_amount');
-        transformControls.setRotationSnap(rot_snap.value);
-        x_rot.value = mainSelection.rotation.x;
-        y_rot.value = mainSelection.rotation.y;
-        z_rot.value = mainSelection.rotation.z;
-        break;
+
+// Transform Controls
+let transformControls = null;
+let transformGizmo = null;
+let translationSnap = 5.0;
+let scaleSnap = 0.5;
+let rotationSnap = (Math.PI / 8);
+
+function activateTransformControls(selectedMesh, mode) {
+  deactivateTransformControls();
+  transformControls = new TransformControls(camera, renderer.domElement);
+  transformControls.setMode(mode);
+  transformControls.attach(selectedMesh);
+  transformControls.setTranslationSnap(translationSnap);
+  transformControls.setScaleSnap(scaleSnap);
+  transformControls.setRotationSnap(rotationSnap);
+  transformControls.addEventListener('dragging-changed', (e) => {
+    controls.active = !e.value;
+  });
+  transformControls.addEventListener('change', (e) => {
+    if (editorControls.innerHTML != "") {
+      const mainSelection = Object.values(selectedObjects)[0];
+      switch (activeTool) {
+        case "move":
+          const x_pos = editorControls.querySelector('#pos-x');
+          const y_pos = editorControls.querySelector('#pos-y');
+          const z_pos = editorControls.querySelector('#pos-z');
+          x_pos.value = mainSelection.position.x;
+          y_pos.value = mainSelection.position.y;
+          z_pos.value = mainSelection.position.z;
+          break;
+        case "scale":
+          const x_scale = editorControls.querySelector('#scale-x');
+          const y_scale = editorControls.querySelector('#scale-y');
+          const z_scale = editorControls.querySelector('#scale-z');
+          x_scale.value = mainSelection.scale.x;
+          y_scale.value = mainSelection.scale.y;
+          z_scale.value = mainSelection.scale.z;
+          break;
+        case "rotate":
+          const x_rot = editorControls.querySelector('#rot-x');
+          const y_rot = editorControls.querySelector('#rot-y');
+          const z_rot = editorControls.querySelector('#rot-z');
+          x_rot.value = mainSelection.rotation.x;
+          y_rot.value = mainSelection.rotation.y;
+          z_rot.value = mainSelection.rotation.z;
+          break;
+      }
     }
+  });
+  transformGizmo = transformControls.getHelper();
+  scene.add(transformGizmo);
+}
+function deactivateTransformControls() {
+  if (transformControls) {
+    transformControls.detach();
   }
-});
-const transformGizmo = transformControls.getHelper()
-scene.add(transformGizmo);
+  transformControls = null;
+  transformGizmo = null;
+  scene.remove(transformGizmo);
+}
 
 // Lighting
 const ambientLight = new THREE.AmbientLight(0xffffff, 1);
@@ -311,7 +332,7 @@ function selectObject(object, keep = false) {
 // Raycasting
 const mouse = new THREE.Vector2();
 function onMouseDown(event) {
-  if (transformControls.dragging || orbitControls.isDragging) return;
+  if (orbitControls.isDragging || (transformControls && transformControls.dragging)) return;
   const rect = canvas.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -399,7 +420,6 @@ function setTool(tool) {
   const selection = Object.values(selectedObjects);
   if (activeTool != tool && selection.length > 0) {
     activeTool = tool;
-    transformControls.detach();
     const mainSelection = Object.values(selectedObjects)[0];
     originPos = mainSelection.position.clone();
     originScale = mainSelection.scale.clone();
@@ -407,41 +427,40 @@ function setTool(tool) {
     switch (tool) {
       case "move":
         setEditor([{ element: 'div', content: "Move Object" },
-        { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: transformControls.translationSnap },
+        { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: translationSnap },
         { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x },
         { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y },
         { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z },
         { element: 'confirmation', id: 'apply-pos' }
         ]);
-        transformControls.setMode('translate');
+        activateTransformControls(mainSelection, 'translate');
         break;
       case "scale":
         setEditor([{ element: 'div', content: "Scale Object" },
-        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: transformControls.scaleSnap },
+        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: scaleSnap },
         { element: 'property', content: "X", id: "scale-x", defaultValue: mainSelection.scale.x },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: mainSelection.scale.y },
         { element: 'property', content: "Z", id: "scale-z", defaultValue: mainSelection.scale.z },
         { element: 'confirmation', id: 'apply-scale' }
         ]);
-        transformControls.setMode('scale');
+        activateTransformControls(mainSelection, 'scale');
         break;
       case "rotate":
         setEditor([{ element: 'div', content: "Rotate Object" },
-        { element: 'property', content: "Snap amount", id: "snap_rotation_amount", defaultValue: transformControls.rotationSnap },
+        { element: 'property', content: "Snap amount", id: "snap_rotation_amount", defaultValue: rotationSnap },
         { element: 'property', content: "X", id: "rot-x", defaultValue: mainSelection.rotation.x },
         { element: 'property', content: "Y", id: "rot-y", defaultValue: mainSelection.rotation.y },
         { element: 'property', content: "Z", id: "rot-z", defaultValue: mainSelection.rotation.z },
         { element: 'confirmation', id: 'apply-rot' }
         ]);
-        transformControls.setMode('rotate');
+        activateTransformControls(mainSelection, 'rotate');
         break
     }
-    transformControls.attach(selection[0]);
   }
 }
 function unselectTool() {
   activeTool = null;
-  transformControls.detach();
+  deactivateTransformControls();
   hideEditor();
 }
 moveButton.addEventListener("click", () => {
@@ -521,9 +540,11 @@ document.addEventListener('click', function (event) {
 
         break;
       case 'apply-pos':
-        const x_pos = document.querySelector('#pos-x').value;
-        const y_pos = document.querySelector('#pos-y').value;
-        const z_pos = document.querySelector('#pos-z').value;
+        const x_pos = Number(document.querySelector('#pos-x').value);
+        const y_pos = Number(document.querySelector('#pos-y').value);
+        const z_pos = Number(document.querySelector('#pos-z').value);
+        const snap_pos_amount = Number(document.querySelector('#snap_pos_amount').value);
+        translationSnap = snap_pos_amount;
         const newPos = new THREE.Vector3(x_pos, y_pos, z_pos);
         for (const mesh of Object.values(selectedObjects)) {
           mesh.position.copy(newPos);
@@ -531,9 +552,11 @@ document.addEventListener('click', function (event) {
         unselectTool();
         break;
       case 'apply-scale':
-        const x_scale = document.querySelector('#scale-x').value;
-        const y_scale = document.querySelector('#scale-y').value;
-        const z_scale = document.querySelector('#scale-z').value;
+        const x_scale = Number(document.querySelector('#scale-x').value);
+        const y_scale = Number(document.querySelector('#scale-y').value);
+        const z_scale = Number(document.querySelector('#scale-z').value);
+        const snap_scale_amount = Number(document.querySelector('#snap_scale_amount').value);
+        scaleSnap = snap_scale_amount;
         const newScale = new THREE.Vector3(x_scale, y_scale, z_scale);
         for (const mesh of Object.values(selectedObjects)) {
           mesh.scale.copy(newScale);
@@ -541,20 +564,25 @@ document.addEventListener('click', function (event) {
         unselectTool();
         break;
       case 'apply-rot':
-        const x_rot = document.querySelector('#rot-x').value;
-        const y_rot = document.querySelector('#rot-y').value;
-        const z_rot = document.querySelector('#rot-z').value;
+        const x_rot = Number(document.querySelector('#rot-x').value);
+        const y_rot = Number(document.querySelector('#rot-y').value);
+        const z_rot = Number(document.querySelector('#rot-z').value);
+        const snap_rot_amount = Number(document.querySelector('#snap_rot_amount').value);
+        rotationSnap = snap_rot_amount;
         for (const mesh of Object.values(selectedObjects)) {
           mesh.rotation.set(x_rot, y_rot, z_rot);
         }
         unselectTool();
         break;
     }
+    for (const mesh of Object.values(selectedObjects)) {
+      console.log(mesh.position);
+    }
   }
 });
 
 function deselectObjects() {
-  transformControls.detach();
+  deactivateTransformControls();
   activeTool = null;
   selectionText.textContent = "Nothing selected";
   outlinePass.selectedObjects = [];
