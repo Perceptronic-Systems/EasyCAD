@@ -62,7 +62,7 @@ button:active {
   background: #2a66a6;
 }
 
-.tool, .primitive, .modifier {
+.tool, .modifier {
   width: 30%;
   margin: 0.3rem 0rem 0.3rem 0rem;
 }
@@ -81,6 +81,8 @@ button:active {
 .primitive {
   background-color: transparent;
   color: rgb(68, 150, 227);
+  margin: 5px;
+  text-align: left;
 }
 
 .modifier {
@@ -200,6 +202,28 @@ canvas {
 .overlay * {
   margin: 0.4rem;
 }
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  z-index: 1;
+  background-color:rgb(43, 43, 48);
+  margin: 5px;
+  min-width: 20vw;
+  flex-direction: column;
+  border-radius: 0.35rem;
+}
+
+.dropdown-content button {
+  display: block;
+}
+
+.dropdown:hover .dropdown-content {display: flex;}
 
 input {
   color: black;

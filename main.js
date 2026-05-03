@@ -275,6 +275,10 @@ function createPrimitive(name, shape, size, position = [0, 0, 0], material = def
     mesh = new THREE.Mesh(new THREE.SphereGeometry(size[0], size[1], size[2]), material);
   } else if (shape == "cylinder" && size.length === 3) {
     mesh = new THREE.Mesh(new THREE.CylinderGeometry(size[0], size[1], size[2]), material);
+  } else if (shape == "cone" && size.length === 3) {
+    mesh = new THREE.Mesh(new THREE.ConeGeometry(size[0], size[1], size[2]), material);
+  } else if (shape == "torus" && size.length === 4) {
+    mesh = new THREE.Mesh(new THREE.TorusGeometry(size[0], size[1], size[2], size[3]), material);
   } else {
     return null;
   }
@@ -547,7 +551,7 @@ function updateTransform() {
       scaleSnap = Number(document.querySelector('#snap_scale_amount').value);
       const newScale = new THREE.Vector3(x_scale, y_scale, z_scale);
       for (const mesh of Object.values(selectedObjects)) {
-        mesh.position.copy(newScale);
+        mesh.scale.copy(newScale);
       }
       break;
     case 'rotate':
@@ -557,7 +561,7 @@ function updateTransform() {
       rotationSnap = Number(document.querySelector('#snap_pos_amount').value);
       const newRot = new THREE.Vector3(x_rot, y_rot, z_rot);
       for (const mesh of Object.values(selectedObjects)) {
-        mesh.position.copy(newRot);
+        mesh.rotation.copy(newRot);
       }
       break;
   }
@@ -640,6 +644,14 @@ sphereButton.addEventListener("click", () => {
 const cylinderButton = document.querySelector("#cylinder");
 cylinderButton.addEventListener("click", () => {
   createPrimitive("Cylinder", "cylinder", [10, 10, 20], [0, 10, 0], default_material);
+});
+const coneButton = document.querySelector("#cone");
+coneButton.addEventListener("click", () => {
+  createPrimitive("Cone", "cone", [10, 20, 32], [0, 10, 0], default_material);
+});
+const torusButton = document.querySelector("#torus");
+torusButton.addEventListener("click", () => {
+  createPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0], default_material);
 });
 
 createPrimitive('Cube 1', 'cube', [20, 20, 20], [0, 10, 0], default_material)

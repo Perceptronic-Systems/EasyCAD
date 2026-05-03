@@ -17,12 +17,19 @@
         <div id="tools" class="container">
           <button class="tool" id="move"></button>
           <button class="tool" id="scale">󰩨</button>
-          <button class="tool" id="rotate"></button>
+          <button class="tool" id="rotate">󰚪</button>
         </div>
         <div id="primatives" class="container">
-          <button class="primitive" id="cube">Cube</button>
-          <button class="primitive" id="sphere">Sphere</button>
-          <button class="primitive" id="cylinder">Cyllinder</button>
+          <div class="dropdown">
+            <button id="primatives">+ Add Shape</button>
+            <div class="dropdown-content">
+              <button class="primitive" id="cube">Cube</button>
+              <button class="primitive" id="sphere">Sphere</button>
+              <button class="primitive" id="cylinder">Cyllinder</button>
+              <button class="primitive" id="cone">Cone</button>
+              <button class="primitive" id="torus">Torus</button>
+            </div>
+          </div>
         </div>
         <div id="modifiers" class="container">
           <button class="modifier" id="merge">󰕤</button>
