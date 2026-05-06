@@ -1,0 +1,76 @@
+import { setTool } from 'editor_controls.js';
+import { createPrimitive, booleanToSelection, slectedObjects, exporter, default_material } from 'cad_tools.js';
+
+
+// Toolbar
+export const moveButton = document.querySelector("#move");
+export const scaleButton = document.querySelector("#scale");
+export const rotateButton = document.querySelector("#rotate");
+export const mergeButton = document.querySelector("#merge");
+export const subtractButton = document.querySelector("#subtract");
+export const intersectionButton = document.querySelector("#intersect");
+export const exportButton = document.querySelector("#export");
+
+moveButton.addEventListener("click", () => {
+  setTool('move');
+});
+
+scaleButton.addEventListener("click", () => {
+  setTool('scale');
+});
+
+rotateButton.addEventListener("click", () => {
+  setTool('rotate');
+});
+
+mergeButton.addEventListener("click", () => {
+  booleanToSelection(ADDITION, 'Combined Part');
+});
+
+subtractButton.addEventListener("click", () => {
+  booleanToSelection(SUBTRACTION, 'Combined Part');
+});
+
+intersectionButton.addEventListener("click", () => {
+  booleanToSelection(INTERSECTION, 'Combined Part');
+});
+
+exportButton.addEventListener("click", () => {
+  for (const mesh of Object.values(selectedObjects)) {
+    const result = exporter.parse(mesh);
+    const blob = new Blob([result], { type: 'application/octet-stream' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const fileName = prompt("Enter a filename for your STL:", mesh.name + ".stl");
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+});
+
+
+// Primatives
+export const cubeButton = document.querySelector("#cube");
+cubeButton.addEventListener("click", () => {
+  createPrimitive("Cube", "cube", [20, 20, 20], [0, 10, 0], default_material);
+});
+
+export const sphereButton = document.querySelector("#sphere");
+sphereButton.addEventListener("click", () => {
+  createPrimitive("Sphere", "sphere", [10, 32, 32], [0, 10, 0], default_material);
+});
+
+export const cylinderButton = document.querySelector("#cylinder");
+cylinderButton.addEventListener("click", () => {
+  createPrimitive("Cylinder", "cylinder", [10, 10, 20], [0, 10, 0], default_material);
+});
+
+export const coneButton = document.querySelector("#cone");
+coneButton.addEventListener("click", () => {
+  createPrimitive("Cone", "cone", [10, 20, 32], [0, 10, 0], default_material);
+});
+
+export const torusButton = document.querySelector("#torus");
+torusButton.addEventListener("click", () => {
+  createPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0], default_material);
+});

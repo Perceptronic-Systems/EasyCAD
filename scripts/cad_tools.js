@@ -1,44 +1,14 @@
-import { camera, renderer, outlineObject, clearOutlines } from 'camera.js';
+import { scene, camera, renderer, outlineObject, clearOutlines, cameraControls} from 'camera.js';
+import { transformControls, deactivateTransformControls } from 'transform_controls.js'
 
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
-import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
 
-export const scene = new THREE.Scene();
+// Ground Plane
 export const gridHelper = new THREE.GridHelper(260, 26);
 scene.add(gridHelper);
-
-// Transform Controls
-let transformControls = null;
-let transformGizmo = null;
-export let translationSnap = 5.0;
-export let scaleSnap = 0.5;
-export let rotationSnap = (Math.PI / 8);
-
-export function activateTransformControls(selectedMesh, mode) {
-  deactivateTransformControls();
-  transformControls = new TransformControls(camera, renderer.domElement);
-  transformControls.setMode(mode);
-  transformControls.attach(selectedMesh);
-  transformControls.setTranslationSnap(translationSnap);
-  transformControls.setScaleSnap(scaleSnap);
-  transformControls.setRotationSnap(rotationSnap);
-  transformControls.addEventListener('dragging-changed', (e) => {
-    controls.active = !e.value;
-  });
-  transformGizmo = transformControls.getHelper();
-  scene.add(transformGizmo);
-}
-export function deactivateTransformControls() {
-  if (transformControls) {
-    transformControls.detach();
-  }
-  transformControls = null;
-  transformGizmo = null;
-  scene.remove(transformGizmo);
-}
 
 // Primitive Functionality
 export const objects = {};

@@ -1,12 +1,17 @@
-import { bool, exponentialHeightFogFactor, select } from 'three/tsl';
-
 import * as THREE from 'three';
+import { bool, exponentialHeightFogFactor, select } from 'three/tsl';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
+
+export const scene = new THREE.Scene();
+
+export const canvas = document.querySelector('#bg');
+export let width = canvas.offsetWidth;
+export let height = canvas.offsetHeight;
 
 export const frustumSize = 40;
 export const aspectRatio = width / height;
@@ -18,6 +23,7 @@ const orthoCamera = new THREE.OrthographicCamera(
   frustumSize / -2,
   -1000,
   1000);
+
 const perspCamera = new THREE.PerspectiveCamera(frustumSize * 2, aspectRatio, 0.001, 1000);
 perspCamera.position.set(25, 60, -75)
 perspCamera.lookAt(0, 0, 0);
@@ -25,10 +31,6 @@ orthoCamera.position.copy(perspCamera.position);
 orthoCamera.quaternion.copy(perspCamera.quaternion);
 
 export let camera = orthoCamera;
-
-camSelector.addEventListener('change', () => {
-  setCameraType();
-});
 
 // Rendering
 export const renderer = new THREE.WebGLRenderer({
