@@ -1,6 +1,6 @@
 import { cancelEdit, selectedObjects, setActiveTool, activeTool } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
-import { snap } from './transform_controls.js';
+import { snap, radToDeg, degToRad } from './transform_controls.js';
 
 import * as THREE from 'three';
 
@@ -90,9 +90,9 @@ export function setTool(tool) {
       case "rotate":
         setEditor([{ element: 'div', content: "Rotate Object" },
         { element: 'property', content: "Snap amount", id: "snap_rot_amount", defaultValue: snap.rotation },
-        { element: 'property', content: "X", id: "rot-x", defaultValue: mainSelection.rotation.x },
-        { element: 'property', content: "Y", id: "rot-y", defaultValue: mainSelection.rotation.y },
-        { element: 'property', content: "Z", id: "rot-z", defaultValue: mainSelection.rotation.z },
+        { element: 'property', content: "X", id: "rot-x", defaultValue: radToDeg(mainSelection.rotation.x) },
+        { element: 'property', content: "Y", id: "rot-y", defaultValue: radToDeg(mainSelection.rotation.y) },
+        { element: 'property', content: "Z", id: "rot-z", defaultValue: radToDeg(mainSelection.rotation.z) },
         { element: 'confirmation', id: 'apply-rot' }
         ]);
         activateTransformControls(mainSelection, 'rotate');
@@ -131,9 +131,9 @@ export function updateEditorControls() {
             const x_rot = editorControls.querySelector('#rot-x');
             const y_rot = editorControls.querySelector('#rot-y');
             const z_rot = editorControls.querySelector('#rot-z');
-            x_rot.value = mainSelection.rotation.x;
-            y_rot.value = mainSelection.rotation.y;
-            z_rot.value = mainSelection.rotation.z;
+            x_rot.value = radToDeg(mainSelection.rotation.x);
+            y_rot.value = radToDeg(mainSelection.rotation.y);
+            z_rot.value = radToDeg(mainSelection.rotation.z);
             break;
         }
     }
@@ -160,9 +160,9 @@ export function updateTransform() {
       }
       break;
     case 'rotate':
-      const x_rot = Number(document.querySelector('#rot-x').value) || 0;
-      const y_rot = Number(document.querySelector('#rot-y').value) || 0;
-      const z_rot = Number(document.querySelector('#rot-z').value) || 0;
+      const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 0;
+      const y_rot = degToRad(Number(document.querySelector('#rot-y').value)) || 0;
+      const z_rot = degToRad(Number(document.querySelector('#rot-z').value)) || 0;
       snap.rotation = Number(document.querySelector('#snap_rot_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
         mesh.rotation.set(x_rot, y_rot, z_rot);
@@ -172,7 +172,7 @@ export function updateTransform() {
   if (transformControls) {
     transformControls.translationSnap = snap.translation;
     transformControls.scaleSnap = snap.scale;
-    transformControls.rotationSnap = snap.rotation;
+    transformControls.rotationSnap = degToRad(snap.rotation);
   }
 }
 
@@ -182,15 +182,17 @@ export function hideEditor() {
 }
 
 export function updateSelectionText() {
-  const objectNames = Object.keys(selectedObjects);
-  let buffer = "";
-  if (objectNames.length > 0) {
-    buffer = objectNames.length + " Selected: " + objectNames.join(", ");
-  } else {
-    buffer = defaultSelection;
-  }
-  if (buffer !== selectionText.textContent) {
-    selectionText.textContent = buffer;
+  if (document.activeElement !== selectionText) {
+    const objectNames = Object.keys(selectedObjects);
+    let buffer = "";
+    if (objectNames.length > 0) {
+      buffer = objectNames.length + " Selected: " + objectNames.join(", ");
+    } else {
+      buffer = defaultSelection;
+    }
+    if (buffer !== selectionText.textContent) {
+      selectionText.textContent = buffer;
+    }
   }
 }
 
