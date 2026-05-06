@@ -11,7 +11,7 @@ updateSelectionText();
 
 
 // Editor controls functionality
-const editorControls = document.querySelector("#editor-controls");
+export const editorControls = document.querySelector("#editor-controls");
 editorControls.style.display = 'None';
 
 export function setEditor(content_items) {
@@ -139,6 +139,14 @@ export function updateEditorControls() {
     }
 }
 
+editorControls.addEventListener('change', (event) => {
+  updateEditorControls();
+});
+
+transformControls.addEventListener('objectChange', (event) => {
+  updateEditorControls();
+});
+
 export function updateTransform() {
   switch (activeTool) {
     case 'move':
@@ -182,17 +190,15 @@ export function hideEditor() {
 }
 
 export function updateSelectionText() {
-  if (document.activeElement !== selectionText) {
-    const objectNames = Object.keys(selectedObjects);
-    let buffer = "";
-    if (objectNames.length > 0) {
-      buffer = objectNames.length + " Selected: " + objectNames.join(", ");
-    } else {
-      buffer = defaultSelection;
-    }
-    if (buffer !== selectionText.textContent) {
-      selectionText.textContent = buffer;
-    }
+  const objectNames = Object.keys(selectedObjects);
+  let buffer = "";
+  if (objectNames.length > 0) {
+    buffer = objectNames.length + " Selected: " + objectNames.join(", ");
+  } else {
+    buffer = defaultSelection;
+  }
+  if (buffer !== selectionText.textContent) {
+    selectionText.textContent = buffer;
   }
 }
 

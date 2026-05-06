@@ -20,13 +20,13 @@ export function radToDeg(radians) {
 }
 
 // Transform Controls
-export let transformControls = null;
-let transformGizmo = null;
+export let transformControls = new TransformControls(camera, renderer.domElement);
+let transformGizmo = transformControls.getHelper();
+scene.add(transformGizmo);
 export const snap = {translation: 5.0, scale: 0.5, rotation: 15};
 
 export function activateTransformControls(selectedMesh, mode) {
   deactivateTransformControls();
-  transformControls = new TransformControls(camera, renderer.domElement);
   transformControls.setMode(mode);
   transformControls.attach(selectedMesh);
   transformControls.setTranslationSnap(snap.translation);
@@ -35,14 +35,9 @@ export function activateTransformControls(selectedMesh, mode) {
   transformControls.addEventListener('dragging-changed', (e) => {
     cameraControls.active = !e.value;
   });
-  transformGizmo = transformControls.getHelper();
-  scene.add(transformGizmo);
 }
 export function deactivateTransformControls() {
   if (transformControls) {
     transformControls.detach();
   }
-  transformControls = null;
-  transformGizmo = null;
-  scene.remove(transformGizmo);
 }
