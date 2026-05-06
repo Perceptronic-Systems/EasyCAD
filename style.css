@@ -225,18 +225,20 @@ canvas {
 
 .dropdown:hover .dropdown-content {display: flex;}
 
+.row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+}
+
 input {
   color: black;
   border-radius: 5px;
   border-style: none;
   padding: 0.5rem;
   background-color: rgb(156, 178, 184);
-  float: right;
-}
-
-label {
-  padding-right: 1rem;
-  float: left;
 }
 
 #footer {
