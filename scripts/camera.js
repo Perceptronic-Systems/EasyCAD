@@ -43,7 +43,7 @@ renderer.setSize(width, height);
 renderer.setClearColor(0x000000, 0);
 
 // Post Processing Effects
-const composer = new EffectComposer(renderer);
+export const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
 const outlinePass = new OutlinePass(

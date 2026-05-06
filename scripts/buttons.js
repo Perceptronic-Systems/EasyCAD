@@ -1,6 +1,14 @@
 import { setTool } from 'editor_controls.js';
 import { createPrimitive, booleanToSelection, slectedObjects, exporter, default_material } from 'cad_tools.js';
+import { setCameraType } from 'camera.js';
 
+// Camera type selector
+export const canvas = document.querySelector('#bg');
+export const camSelector = document.querySelector('#cam-switch');
+camSelector.checked = true;
+camSelector.addEventListener('change', () => {
+  setCameraType();
+});
 
 // Toolbar
 export const moveButton = document.querySelector("#move");

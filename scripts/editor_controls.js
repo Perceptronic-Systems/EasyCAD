@@ -1,6 +1,12 @@
 import { cancelEdit, selectedObjects, activateTransformControls, deactivateTransformControls, activeTool } from "cad_tools.js";
 import { transformControls } from "transform_controls.js";
 
+
+const defaultSelection = 'nothing selected';
+export const selectionText = document.querySelector("#selected");
+selectionText.textContent = defaultSelection;
+
+
 // Editor controls functionality
 const editorControls = document.querySelector("#editor-controls");
 editorControls.style.display = 'None';
@@ -177,6 +183,11 @@ export function hideEditor() {
 }
 
 document.addEventListener('click', function (event) {
+  if (Object.keys(selectedObjects).length > 0) {
+    selectionText.textContent = "1 Selected: " + Object.keys(selectedObjects)[0];
+  } else {
+    selectionText.textContent = defaultSelection;
+  }
   if (event.target) {
     switch (event.target.id) {
       case 'cancel':
