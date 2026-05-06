@@ -1,5 +1,5 @@
-import { deselectObjects, removeObject } from "cad_tools.js";
-import { unselectTool, setTool } from "editor_controls.js";
+import { deselectObjects, removeObject, selectedObjects } from "./cad_tools.js";
+import { unselectTool, setTool } from "./editor_controls.js";
 
 let shiftDown = false;
 document.addEventListener('keydown', (event) => {

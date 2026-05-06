@@ -1,23 +1,21 @@
-import { scene, camera, renderer } from 'camera.js';
+import { scene, camera, renderer, cameraControls } from './camera.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 // Transform Controls
 export let transformControls = null;
 let transformGizmo = null;
-export let translationSnap = 5.0;
-export let scaleSnap = 0.5;
-export let rotationSnap = (Math.PI / 8);
+export const snap = {translation: 5.0, scale: 0.5, rotation: Math.PI / 8};
 
 export function activateTransformControls(selectedMesh, mode) {
   deactivateTransformControls();
   transformControls = new TransformControls(camera, renderer.domElement);
   transformControls.setMode(mode);
   transformControls.attach(selectedMesh);
-  transformControls.setTranslationSnap(translationSnap);
-  transformControls.setScaleSnap(scaleSnap);
-  transformControls.setRotationSnap(rotationSnap);
+  transformControls.setTranslationSnap(snap.translation);
+  transformControls.setScaleSnap(snap.scale);
+  transformControls.setRotationSnap(snap.rotation);
   transformControls.addEventListener('dragging-changed', (e) => {
-    controls.active = !e.value;
+    cameraControls.active = !e.value;
   });
   transformGizmo = transformControls.getHelper();
   scene.add(transformGizmo);

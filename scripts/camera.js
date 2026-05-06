@@ -68,8 +68,8 @@ export function clearOutlines() {
 }
 
 // View Selection
-function setCameraType() {
-  if (camSelector.checked) {
+export function setCameraType(orthographic) {
+  if (orthographic) {
     camera = orthoCamera;
     camera.position.copy(perspCamera.position);
   } else {
@@ -80,15 +80,9 @@ function setCameraType() {
   renderPass.camera = camera;
   outlinePass.renderCamera = camera;
   camera.updateProjectionMatrix();
-  controls.cam = camera;
-  controls.update();
+  cameraControls.cam = camera;
+  cameraControls.update();
   handleResize();
-  if (transformControls) {
-    const mode = transformControls.mode;
-    const selectedObject = transformControls.object;
-    deactivateTransformControls();
-    activateTransformControls(selectedObject, mode);
-  }
 }
 
 // Resizing
@@ -162,7 +156,6 @@ class orbitControls {
     window.addEventListener('mouseup', () => this.isDragging = false);
     this.domElement.addEventListener('wheel', (e) => {
       this.radius = Math.max(1, Math.min(600, this.radius + (e.deltaY * 0.05 * this.zoomSpeed) * this.radius / 10));
-      scene.add(gridHelper);
       this.update();
     });
   }

@@ -1,10 +1,13 @@
-import { cancelEdit, selectedObjects, activateTransformControls, deactivateTransformControls, activeTool } from "cad_tools.js";
-import { transformControls } from "transform_controls.js";
+import { cancelEdit, selectedObjects, setActiveTool, activeTool } from "./cad_tools.js";
+import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
+import { snap } from './transform_controls.js';
+
+import * as THREE from 'three';
 
 
 const defaultSelection = 'nothing selected';
 export const selectionText = document.querySelector("#selected");
-selectionText.textContent = defaultSelection;
+updateSelectionText();
 
 
 // Editor controls functionality
@@ -60,16 +63,13 @@ export function setEditor(content_items) {
 export function setTool(tool) {
   editorControls.innerHTML = "";
   const selection = Object.values(selectedObjects);
+  const mainSelection = selection[0];
   if (activeTool != tool && selection.length > 0) {
-    activeTool = tool;
-    const mainSelection = Object.values(selectedObjects)[0];
-    originPos = mainSelection.position.clone();
-    originScale = mainSelection.scale.clone();
-    originRot = mainSelection.rotation.clone();
+    setActiveTool(tool);
     switch (tool) {
       case "move":
         setEditor([{ element: 'div', content: "Move Object" },
-        { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: translationSnap },
+        { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: snap.translation },
         { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x },
         { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y },
         { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z },
@@ -79,7 +79,7 @@ export function setTool(tool) {
         break;
       case "scale":
         setEditor([{ element: 'div', content: "Scale Object" },
-        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: scaleSnap },
+        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: snap.scale },
         { element: 'property', content: "X", id: "scale-x", defaultValue: mainSelection.scale.x },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: mainSelection.scale.y },
         { element: 'property', content: "Z", id: "scale-z", defaultValue: mainSelection.scale.z },
@@ -89,7 +89,7 @@ export function setTool(tool) {
         break;
       case "rotate":
         setEditor([{ element: 'div', content: "Rotate Object" },
-        { element: 'property', content: "Snap amount", id: "snap_rotation_amount", defaultValue: rotationSnap },
+        { element: 'property', content: "Snap amount", id: "snap_rot_amount", defaultValue: snap.rotation },
         { element: 'property', content: "X", id: "rot-x", defaultValue: mainSelection.rotation.x },
         { element: 'property', content: "Y", id: "rot-y", defaultValue: mainSelection.rotation.y },
         { element: 'property', content: "Z", id: "rot-z", defaultValue: mainSelection.rotation.z },
@@ -101,13 +101,14 @@ export function setTool(tool) {
   }
 }
 export function unselectTool() {
-  activeTool = null;
+  setActiveTool(null);
   deactivateTransformControls();
   hideEditor();
 }
 
-transformControls.addEventListener('change', (e) => {
-    if (editorControls.innerHTML != "") {
+export function updateEditorControls() {
+  updateSelectionText();
+  if (editorControls.innerHTML != "") {
         const mainSelection = Object.values(selectedObjects)[0];
         switch (activeTool) {
         case "move":
@@ -136,8 +137,7 @@ transformControls.addEventListener('change', (e) => {
             break;
         }
     }
-});
-
+}
 
 export function updateTransform() {
   switch (activeTool) {
@@ -145,36 +145,35 @@ export function updateTransform() {
       const x_pos = Number(document.querySelector('#pos-x').value) || 0;
       const y_pos = Number(document.querySelector('#pos-y').value) || 0;
       const z_pos = Number(document.querySelector('#pos-z').value) || 0;
-      translationSnap = Number(document.querySelector('#snap_pos_amount').value);
-      const newPos = new THREE.Vector3(x_pos, y_pos, z_pos);
+      snap.translation = Number(document.querySelector('#snap_pos_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
-        mesh.position.copy(newPos);
+        mesh.position.set(x_pos, y_pos, z_pos);
       }
       break;
     case 'scale':
       const x_scale = Number(document.querySelector('#scale-x').value) || 0;
       const y_scale = Number(document.querySelector('#scale-y').value) || 0;
       const z_scale = Number(document.querySelector('#scale-z').value) || 0;
-      scaleSnap = Number(document.querySelector('#snap_scale_amount').value);
-      const newScale = new THREE.Vector3(x_scale, y_scale, z_scale);
+      snap.scale = Number(document.querySelector('#snap_scale_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
-        mesh.scale.copy(newScale);
+        mesh.scale.set(x_scale, y_scale, z_scale);
       }
       break;
     case 'rotate':
       const x_rot = Number(document.querySelector('#rot-x').value) || 0;
       const y_rot = Number(document.querySelector('#rot-y').value) || 0;
       const z_rot = Number(document.querySelector('#rot-z').value) || 0;
-      rotationSnap = Number(document.querySelector('#snap_pos_amount').value);
-      const newRot = new THREE.Vector3(x_rot, y_rot, z_rot);
+      snap.rotation = Number(document.querySelector('#snap_rot_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
-        mesh.rotation.copy(newRot);
+        mesh.rotation.set(x_rot, y_rot, z_rot);
       }
       break;
   }
-  transformControls.translationSnap = translationSnap;
-  transformControls.scaleSnap = scaleSnap;
-  transformControls.rotationSnap = rotationSnap;
+  if (transformControls) {
+    transformControls.translationSnap = snap.translation;
+    transformControls.scaleSnap = snap.scale;
+    transformControls.rotationSnap = snap.rotation;
+  }
 }
 
 export function hideEditor() {
@@ -182,19 +181,29 @@ export function hideEditor() {
   editorControls.innerHTML = "";
 }
 
-document.addEventListener('click', function (event) {
-  if (Object.keys(selectedObjects).length > 0) {
-    selectionText.textContent = "1 Selected: " + Object.keys(selectedObjects)[0];
+export function updateSelectionText() {
+  const objectNames = Object.keys(selectedObjects);
+  let buffer = "";
+  if (objectNames.length > 0) {
+    buffer = objectNames.length + " Selected: " + objectNames.join(", ");
   } else {
-    selectionText.textContent = defaultSelection;
+    buffer = defaultSelection;
   }
+  if (buffer !== selectionText.textContent) {
+    selectionText.textContent = buffer;
+  }
+}
+
+document.addEventListener('click', function (event) {
   if (event.target) {
     switch (event.target.id) {
       case 'cancel':
         cancelEdit();
-
+        unselectTool();
         break;
-      case 'apply-pos' || 'apply-scale' || 'apply-rot':
+      case 'apply-pos':
+      case 'apply-scale':
+      case 'apply-rot':
         updateTransform();
         unselectTool();
         break;
@@ -203,7 +212,7 @@ document.addEventListener('click', function (event) {
 });
 
 editorControls.addEventListener('input', function (event) {
-  if (event.target) {
+  if (event.target && activeTool !== null) {
     updateTransform();
   }
 });

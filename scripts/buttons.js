@@ -1,13 +1,13 @@
-import { setTool } from 'editor_controls.js';
-import { createPrimitive, booleanToSelection, slectedObjects, exporter, default_material } from 'cad_tools.js';
-import { setCameraType } from 'camera.js';
+import { setTool } from './editor_controls.js';
+import { createPrimitive, booleanToSelection, selectedObjects, exporter, default_material } from './cad_tools.js';
+import { setCameraType } from './camera.js';
 
 // Camera type selector
 export const canvas = document.querySelector('#bg');
 export const camSelector = document.querySelector('#cam-switch');
 camSelector.checked = true;
 camSelector.addEventListener('change', () => {
-  setCameraType();
+  setCameraType(camSelector.checked);
 });
 
 // Toolbar
@@ -32,15 +32,15 @@ rotateButton.addEventListener("click", () => {
 });
 
 mergeButton.addEventListener("click", () => {
-  booleanToSelection(ADDITION, 'Combined Part');
+  booleanToSelection('merge', 'Combined Part');
 });
 
 subtractButton.addEventListener("click", () => {
-  booleanToSelection(SUBTRACTION, 'Combined Part');
+  booleanToSelection('subtract', 'Combined Part');
 });
 
 intersectionButton.addEventListener("click", () => {
-  booleanToSelection(INTERSECTION, 'Combined Part');
+  booleanToSelection('intersect', 'Combined Part');
 });
 
 exportButton.addEventListener("click", () => {

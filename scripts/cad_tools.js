@@ -1,5 +1,5 @@
-import { scene, camera, renderer, outlineObject, clearOutlines, cameraControls} from 'camera.js';
-import { transformControls, deactivateTransformControls } from 'transform_controls.js'
+import { scene, camera, renderer, canvas, outlineObject, clearOutlines, cameraControls} from './camera.js';
+import { transformControls, deactivateTransformControls } from './transform_controls.js'
 
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
@@ -58,8 +58,6 @@ export function selectObject(object, keep = false) {
   if (mesh) {
     if (keep) {
       selectedObjects[object] = mesh;
-      const objectNames = Object.keys(selectedObjects);
-      selectionText.textContent = objectNames.length + " Selected: " + objectNames.join(", ");
     } else {
       deselectObjects();
       selectedObjects[object] = mesh
@@ -72,10 +70,23 @@ export function selectObject(object, keep = false) {
   }
 }
 
+//Keypress
+let shiftDown = false;
+document.addEventListener('keydown', (event) => {
+  switch (event.key) {
+    case 'Shift':
+      shiftDown = true;
+      break
+  }
+});
+document.addEventListener('keyup', (event) => {
+  if (event.key === 'Shift') shiftDown = false;
+});
+
 // Raycasting
 const mouse = new THREE.Vector2();
 function onMouseDown(event) {
-  if (cameraControls.isDragging || (transformControls && transformControls.dragging)) return;
+  if (transformControls && transformControls.dragging) return;
   const rect = canvas.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -97,11 +108,19 @@ export let originPos = null;
 export let originScale = null;
 export let originRot = null;
 export let activeTool = null;
+export const setActiveTool = (tool) => {
+  if (activeTool !== tool) {
+    const mainSelection = Object.values(selectedObjects)[0];
+    originPos = mainSelection.position.clone();
+    originScale = mainSelection.scale.clone();
+    originRot = mainSelection.rotation.clone();
+  }
+  activeTool = tool;
+}
 
 export const exporter = new STLExporter();
 
 export function cancelEdit() {
-  unselectTool()
   const mainSelection = Object.values(selectedObjects)[0];
   mainSelection.position.copy(originPos);
   mainSelection.scale.copy(originScale);
@@ -116,7 +135,10 @@ export function deselectObjects() {
 }
 
 // Boolean Functionality
-function booleanToSelection(operation, resultName) {
+const operations = {merge: ADDITION, subtract: SUBTRACTION, intersect: INTERSECTION}
+
+export function booleanToSelection(operation_type, resultName) {
+  const operation = operations[operation_type];
   let selectedNames = Object.keys(selectedObjects)
   if (selectedNames.length > 2) {
     alert("Sorry! For now boolean operations only support the selection of 2 objects at a time.");
