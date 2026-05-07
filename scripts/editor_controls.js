@@ -1,6 +1,6 @@
 import { cancelEdit, selectedObjects, setActiveTool, activeTool } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
-import { snap, radToDeg, degToRad } from './transform_controls.js';
+import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';
 
@@ -83,11 +83,11 @@ export function setTool(tool) {
         activateTransformControls(mainSelection, 'translate');
         break;
       case "scale":
+        const size = getSize(mainSelection)
         setEditor([{ element: 'div', content: "Scale Object" },
-        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: snap.scale, unit: '%' },
-        { element: 'property', content: "X", id: "scale-x", defaultValue: mainSelection.scale.x, unit: '%' },
-        { element: 'property', content: "Y", id: "scale-y", defaultValue: mainSelection.scale.y, unit: '%' },
-        { element: 'property', content: "Z", id: "scale-z", defaultValue: mainSelection.scale.z, unit: '%' },
+        { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm' },
+        { element: 'property', content: "Y", id: "scale-y", defaultValue: size.y, unit: 'mm' },
+        { element: 'property', content: "Z", id: "scale-z", defaultValue: size.z, unit: 'mm' },
         { element: 'confirmation', id: 'apply-scale' }
         ]);
         activateTransformControls(mainSelection, 'scale');
@@ -125,12 +125,13 @@ export function updateEditorControls() {
             z_pos.value = mainSelection.position.z;
             break;
         case "scale":
-            const x_scale = editorControls.querySelector('#scale-x');
-            const y_scale = editorControls.querySelector('#scale-y');
-            const z_scale = editorControls.querySelector('#scale-z');
-            x_scale.value = mainSelection.scale.x;
-            y_scale.value = mainSelection.scale.y;
-            z_scale.value = mainSelection.scale.z;
+            const x_size = editorControls.querySelector('#scale-x');
+            const y_size = editorControls.querySelector('#scale-y');
+            const z_size = editorControls.querySelector('#scale-z');
+            const size = getSize(mainSelection);
+            x_size.value = size.x.toFixed(2);
+            y_size.value = size.y.toFixed(2);
+            z_size.value = size.z.toFixed(2);
             break;
         case "rotate":
             const x_rot = editorControls.querySelector('#rot-x');
@@ -164,18 +165,17 @@ export function updateTransform() {
       }
       break;
     case 'scale':
-      const x_scale = Number(document.querySelector('#scale-x').value) || 0;
-      const y_scale = Number(document.querySelector('#scale-y').value) || 0;
-      const z_scale = Number(document.querySelector('#scale-z').value) || 0;
-      snap.scale = Number(document.querySelector('#snap_scale_amount').value);
+      const x_size = Number(document.querySelector('#scale-x').value) || 1;
+      const y_size = Number(document.querySelector('#scale-y').value) || 1;
+      const z_size = Number(document.querySelector('#scale-z').value) || 1;
       for (const mesh of Object.values(selectedObjects)) {
-        mesh.scale.set(x_scale, y_scale, z_scale);
+        setSize(mesh, x_size, y_size, z_size);
       }
       break;
     case 'rotate':
-      const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 0;
-      const y_rot = degToRad(Number(document.querySelector('#rot-y').value)) || 0;
-      const z_rot = degToRad(Number(document.querySelector('#rot-z').value)) || 0;
+      const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 10;
+      const y_rot = degToRad(Number(document.querySelector('#rot-y').value)) || 10;
+      const z_rot = degToRad(Number(document.querySelector('#rot-z').value)) || 10;
       snap.rotation = Number(document.querySelector('#snap_rot_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
         mesh.rotation.set(x_rot, y_rot, z_rot);
@@ -183,9 +183,7 @@ export function updateTransform() {
       break;
   }
   if (transformControls) {
-    transformControls.translationSnap = snap.translation;
-    transformControls.scaleSnap = snap.scale;
-    transformControls.rotationSnap = degToRad(snap.rotation);
+    updateSnap();
   }
 }
 
