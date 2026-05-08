@@ -26,10 +26,23 @@ export function getSize(mesh) {
   return new THREE.Vector3(unitsX, unitsY, unitsZ);
 }
 
-export function updateSnap() {
+export function updateSnap(mesh) {
   transformControls.setTranslationSnap(snap.translation);
-  transformControls.translationSnap = null;
+  transformControls.scaleSnap = null; // Disables the default scale snap method as it uses relative percentage instead of world units
+  scaleSnap(mesh);
   transformControls.setRotationSnap((snap.rotation * (Math.PI / 180)) % (2 * Math.PI));
+}
+
+export function scaleSnap(mesh) {
+  if (transformControls.mode === 'scale') {
+    const box = new THREE.Box3().setFromObject(mesh);
+    const currentScale = mesh.scale;
+    const baseSize = new THREE.Vector3();
+    box.getSize(baseSize);
+    mesh.scale.x = (Math.round(baseSize.x / snap.scale) * snap.scale) * (currentScale.x / baseSize.x) || currentScale.x;
+    mesh.scale.y = (Math.round(baseSize.y / snap.scale) * snap.scale) * (currentScale.y / baseSize.y) || currentScale.y;
+    mesh.scale.z = (Math.round(baseSize.z / snap.scale) * snap.scale) * (currentScale.z / baseSize.z) || currentScale.z;
+  }
 }
 
 export function clampDeg(degrees) {
@@ -58,7 +71,7 @@ export function activateTransformControls(selectedMesh, mode) {
   deactivateTransformControls();
   transformControls.setMode(mode);
   transformControls.attach(selectedMesh);
-  updateSnap();
+  updateSnap(selectedMesh);
   transformControls.addEventListener('dragging-changed', (e) => {
     cameraControls.active = !e.value;
   });

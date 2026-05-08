@@ -85,6 +85,7 @@ export function setTool(tool) {
       case "scale":
         const size = getSize(mainSelection)
         setEditor([{ element: 'div', content: "Scale Object" },
+        { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: snap.scale, unit: 'mm' },
         { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm' },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: size.y, unit: 'mm' },
         { element: 'property', content: "Z", id: "scale-z", defaultValue: size.z, unit: 'mm' },
@@ -145,12 +146,11 @@ export function updateEditorControls() {
     }
 }
 
-editorControls.addEventListener('change', (event) => {
-  updateEditorControls();
-});
-
 transformControls.addEventListener('objectChange', (event) => {
   updateEditorControls();
+  for (var mesh of Object.values(selectedObjects)) {
+    updateSnap(mesh);
+  }
 });
 
 export function updateTransform() {
@@ -161,6 +161,7 @@ export function updateTransform() {
       const z_pos = Number(document.querySelector('#pos-z').value) || 0;
       snap.translation = Number(document.querySelector('#snap_pos_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
+        updateSnap(mesh);
         mesh.position.set(x_pos, y_pos, z_pos);
       }
       break;
@@ -168,8 +169,10 @@ export function updateTransform() {
       const x_size = Number(document.querySelector('#scale-x').value) || 1;
       const y_size = Number(document.querySelector('#scale-y').value) || 1;
       const z_size = Number(document.querySelector('#scale-z').value) || 1;
+      snap.scale = Number(document.querySelector('#snap_scale_amount').value) || 0.0;
       for (const mesh of Object.values(selectedObjects)) {
         setSize(mesh, x_size, y_size, z_size);
+        updateSnap(mesh);
       }
       break;
     case 'rotate':
@@ -178,12 +181,10 @@ export function updateTransform() {
       const z_rot = degToRad(Number(document.querySelector('#rot-z').value)) || 10;
       snap.rotation = Number(document.querySelector('#snap_rot_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
+        updateSnap(mesh);
         mesh.rotation.set(x_rot, y_rot, z_rot);
       }
       break;
-  }
-  if (transformControls) {
-    updateSnap();
   }
 }
 
