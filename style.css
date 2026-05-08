@@ -203,12 +203,39 @@ canvas {
   margin: 0.4rem;
 }
 
+.tooltip {
+  position: relative;
+}
+
+.tooltip-text {
+  display: none;
+  font-size: 12pt;
+  position: absolute;
+  z-index: 1;
+  white-space: pre-line;
+  background-color:rgba(43, 43, 48, 0.8);
+  color: white;
+  border-radius: 0.35rem;
+  padding: 0.4rem;
+  text-align: center;
+  text-justify: center;
+  text-wrap: nowrap;
+  align-content: center;
+  justify-content: center;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 3.5rem;
+}
+
 .dropdown {
   position: relative;
   display: inline-block;
 }
 
 .dropdown-content {
+  top: 3.2rem;
+  left: 50%;
+  transform: translateX(-50%);
   display: none;
   position: absolute;
   z-index: 1;
@@ -224,6 +251,10 @@ canvas {
 }
 
 .dropdown:hover .dropdown-content {display: flex;}
+
+.tooltip:hover .tooltip-text {
+  display: flex;
+}
 
 .row {
   display: flex;

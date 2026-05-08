@@ -16,9 +16,15 @@
       <h2 class="logo">EasyCAD</h2>
       <div id="toolbar">
         <div id="tools" class="container">
-          <button class="tool" id="move"></button>
-          <button class="tool" id="scale">󰩨</button>
-          <button class="tool" id="rotate">󰚪</button>
+          <button class="tool tooltip" id="move">
+            <div class="tooltip-text">Move</div>
+          </button>
+          <button class="tool tooltip" id="scale">󰩨
+            <div class="tooltip-text">Scale</div>
+          </button>
+          <button class="tool tooltip" id="rotate">󰚪
+            <div class="tooltip-text">Rotate</div>
+          </button>
         </div>
         <div id="primatives" class="container">
           <div class="dropdown">
@@ -33,9 +39,18 @@
           </div>
         </div>
         <div id="modifiers" class="container">
-          <button class="modifier" id="merge">󰕤</button>
-          <button class="modifier" id="subtract">󰕛</button>
-          <button class="modifier" id="intersect">󰕝</button>
+          <button class="modifier tooltip" id="merge">󰕤
+            <div class="tooltip-text">Merge
+              combine two meshes</div>
+          </button>
+          <button class="modifier tooltip" id="subtract">󰕛
+            <div class="tooltip-text">Subtract
+              cut a hole</div>
+          </button>
+          <button class="modifier tooltip" id="intersect">󰕝
+            <div class="tooltip-text">Intersect
+              keep only overlapping areas</div>
+          </button>
         </div>
       </div>
       <button id="export"><p id="download-icon">🢳</p><p id="download-text">Export Selected STLs</p></button>
