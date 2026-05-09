@@ -10,8 +10,23 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 export const gridHelper = new THREE.GridHelper(260, 26);
 scene.add(gridHelper);
 
+// Object creation, ensures all objects have different names
+export const objects = new Set([]);
+export function instantiateObject(mesh, name, selectOnFinish) {
+  let i = 0;
+  let tempName = name;
+  while (scene.getObjectByName(tempName)) {
+    i += 1;
+    tempName = name + " " + i;
+  }
+  mesh.name = tempName;
+  scene.add(mesh);
+  objects.add(tempName);
+  if (selectOnFinish) selectObject(tempName);
+  return mesh;
+}
+
 // Primitive Functionality
-export const objects = {};
 export const default_material = new THREE.MeshStandardMaterial({ color: 0x1b8237 });
 export function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
   let mesh = null;
@@ -29,22 +44,12 @@ export function createPrimitive(name, shape, size, position = [0, 0, 0], materia
     return null;
   }
   mesh.position.set(position[0], position[1], position[2]);
-  let i = 0;
-  let tempName = name;
-  while (scene.getObjectByName(tempName)) {
-    i += 1;
-    tempName = name + " " + i;
-  }
-  mesh.name = tempName;
-  scene.add(mesh);
-  objects[tempName] = shape;
-  if (selectOnFinish) selectObject(tempName);
-  return mesh;
+  instantiateObject(mesh, name, selectOnFinish);
 }
 export function removeObject(objectName) {
   const mesh = scene.getObjectByName(objectName);
   scene.remove(mesh);
-  delete objects[objectName];
+  objects.delete(objectName);
   if (mesh.geometry) mesh.geometry.dispose();
   mesh.material = null;
 }
@@ -53,15 +58,15 @@ export function removeObject(objectName) {
 // Selection Functionality
 export let selectedObjects = {};
 
-export function selectObject(object, keep = false) {
-  const mesh = scene.getObjectByName(object);
+export function selectObject(objectName, keep = false) {
+  const mesh = scene.getObjectByName(objectName);
   if (mesh) {
     if (keep) {
-      selectedObjects[object] = mesh;
+      selectedObjects[objectName] = mesh;
     } else {
       deselectObjects();
-      selectedObjects[object] = mesh
-      if (activeTool != null) {
+      selectedObjects[objectName] = mesh
+      if (activeTool !== null) {
         transformControls.detach();
         transformControls.attach(mesh);
       }
@@ -70,17 +75,45 @@ export function selectObject(object, keep = false) {
   }
 }
 
-//Keypress
-let shiftDown = false;
+export function selectAll() {
+  deselectObjects();
+  scene.children.forEach((child) => {
+    if (objects.has(child.name)) {
+      selectObject(child.name, true);
+    }
+  })
+}
+
+// Copy, paste, and duplicate
+let clipboard = {}
+export function copy() {
+  for (let [objectName, mesh] of Object.entries(selectedObjects)) {
+    clipboard[objectName] = mesh.clone();
+  }
+}
+
+export function paste() {
+  for (let [objectName, object] of Object.entries(clipboard)) {
+    instantiateObject(object, objectName, true);
+  }
+}
+
+//Keypress for shift selection and control
+export let shiftDown = false;
+export let ctrlDown = false;
 document.addEventListener('keydown', (event) => {
   switch (event.key) {
     case 'Shift':
       shiftDown = true;
       break
   }
+  if (event.ctrlKey) {
+    ctrlDown = true;
+  }
 });
 document.addEventListener('keyup', (event) => {
   if (event.key === 'Shift') shiftDown = false;
+  if (!event.ctrlKey) ctrlDown = false;
 });
 
 // Raycasting
@@ -95,10 +128,10 @@ function onMouseDown(event) {
 const raycaster = new THREE.Raycaster();
 function raycast() {
   raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && Object.keys(objects).includes(child.name)), true);
+  const intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && objects.has(child.name)), true);
   if (intersects.length > 0 && activeTool == null) {
     const hit = intersects[0].object;
-    selectObject(hit.name, shiftDown);
+    selectObject(hit.name, shiftDown || ctrlDown);
   }
 }
 window.addEventListener('mousedown', onMouseDown);
@@ -168,6 +201,6 @@ function booleanOperation(operation, objectA, objectB, resultName) {
   removeObject(objectB);
   result.name = resultName;
   scene.add(result);
-  objects[resultName] = 'composite_part';
+  objects.add(resultName);
   selectObject(resultName);
 }

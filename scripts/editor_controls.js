@@ -176,9 +176,9 @@ export function updateTransform() {
       }
       break;
     case 'rotate':
-      const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 10;
-      const y_rot = degToRad(Number(document.querySelector('#rot-y').value)) || 10;
-      const z_rot = degToRad(Number(document.querySelector('#rot-z').value)) || 10;
+      const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 0;
+      const y_rot = degToRad(Number(document.querySelector('#rot-y').value)) || 0;
+      const z_rot = degToRad(Number(document.querySelector('#rot-z').value)) || 0;
       snap.rotation = Number(document.querySelector('#snap_rot_amount').value);
       for (const mesh of Object.values(selectedObjects)) {
         updateSnap(mesh);

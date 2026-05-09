@@ -1,8 +1,9 @@
-import { deselectObjects, removeObject, selectedObjects } from "./cad_tools.js";
+import { selectAll, copy, paste, deselectObjects, removeObject, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
 import { unselectTool, setTool } from "./editor_controls.js";
 
 document.addEventListener('keydown', (event) => {
-  switch (event.key) {
+  event.preventDefault();
+  switch (event.key.toLowerCase()) {
     case "Escape":
       unselectTool()
       break;
@@ -13,6 +14,15 @@ document.addEventListener('keydown', (event) => {
         }
         deselectObjects();
       }
+    case 'a':
+      if (ctrlDown) {
+        if (!shiftDown) {
+          selectAll();
+        } else {
+          deselectObjects();
+        }
+      }
+      break;
     case 'g':
       setTool('move');
       break;
@@ -22,6 +32,21 @@ document.addEventListener('keydown', (event) => {
     case 's':
       setTool('scale');
       break;
+    case 'c':
+      if (ctrlDown) {
+        copy();
+      }
+      break;
+    case 'v':
+      if (ctrlDown) {
+        paste();
+      }
+      break;
+    case 'd':
+      if (ctrlDown) {
+        copy();
+        paste();
+      }
   }
 
 });
