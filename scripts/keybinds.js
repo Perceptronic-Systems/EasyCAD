@@ -1,4 +1,5 @@
-import { selectAll, copy, paste, deselectObjects, removeObject, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
+import { cubeTexture } from "three/tsl";
+import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeObject, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
 import { unselectTool, setTool } from "./editor_controls.js";
 
 document.addEventListener('keydown', (event) => {
@@ -36,6 +37,15 @@ document.addEventListener('keydown', (event) => {
       if (ctrlDown) {
         copy();
       }
+      break;
+    case 'm':
+      if (ctrlDown) booleanToSelection('merge', 'Combined Part');
+      break;
+    case 'o':
+      if (ctrlDown) booleanToSelection('subtract', 'Combined Part');
+      break;
+    case 'i':
+      if (ctrlDown) booleanToSelection('intersect', 'Combined Part');
       break;
     case 'v':
       if (ctrlDown) {

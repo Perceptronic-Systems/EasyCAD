@@ -190,12 +190,12 @@ canvas {
 }
 
 #cancel {
-  float: left;
+  margin-right: auto;
   background-color: rgb(71, 79, 84);
 }
 
 .apply {
-  float: right;
+  margin-left: auto;
   background-color: rgb(34, 110, 198);
 }
 
@@ -241,7 +241,6 @@ canvas {
   z-index: 1;
   background-color:rgb(43, 43, 48);
   margin: 5px;
-  min-width: 20vw;
   flex-direction: column;
   border-radius: 0.35rem;
 }
@@ -265,6 +264,7 @@ canvas {
 }
 
 input {
+  width: 5rem;
   color: black;
   border-radius: 5px;
   border-style: none;
