@@ -72,7 +72,7 @@ transformControls.addEventListener('change', (e) => {
   const axis = transformControls.axis;
   const object = transformControls.object;
   let maxScale = 1;
-  if (!object) return;
+  if (!object || !transformControls.dragging) return;
 
   if (transformControls.mode === "scale") {
     switch (axis) {
@@ -119,7 +119,6 @@ export function activateTransformControls(selectedMesh, mode) {
     set: () => {}, // Ignore attempts to set it to true
     configurable: true
   });
-  console.log(`Rotation: ${rotationE.visible}, picker: ${pickerE.visible}`)
 }
 export function deactivateTransformControls() {
   if (transformControls) {
