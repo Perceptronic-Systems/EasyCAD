@@ -63,18 +63,63 @@ export function radToDeg(radians) {
 }
 
 // Transform Controls
-export let transformControls = new TransformControls(camera, renderer.domElement);
-let transformGizmo = transformControls.getHelper();
+export const transformControls = new TransformControls(camera, renderer.domElement);
+const transformGizmo = transformControls.getHelper();
 scene.add(transformGizmo);
+const internalGizmo = transformGizmo.children[0];
+
+transformControls.addEventListener('change', (e) => {
+  const axis = transformControls.axis;
+  const object = transformControls.object;
+  let maxScale = 1;
+  if (!object) return;
+
+  if (transformControls.mode === "scale") {
+    switch (axis) {
+      case "XY":
+        maxScale = Math.max(object.scale.x, object.scale.y);
+        object.scale.set(maxScale, maxScale, object.scale.z);
+        break;
+      case "XZ":
+        maxScale = Math.max(object.scale.x, object.scale.z);
+        object.scale.set(maxScale, object.scale.y, maxScale);
+        break;
+      case "YZ":
+        maxScale = Math.max(object.scale.y, object.scale.z);
+        object.scale.set(object.scale.x, maxScale, maxScale);
+        break;
+      case "XYZ":
+        maxScale = Math.max(object.scale.x, object.scale.y, object.scale.z);
+        object.scale.set(maxScale, maxScale, maxScale);
+        break;
+    }
+  }
+})
+
+transformControls.addEventListener('dragging-changed', (e) => {
+    cameraControls.active = !e.value;
+});
 
 export function activateTransformControls(selectedMesh, mode) {
   deactivateTransformControls();
   transformControls.setMode(mode);
   transformControls.attach(selectedMesh);
   updateSnap(selectedMesh);
-  transformControls.addEventListener('dragging-changed', (e) => {
-    cameraControls.active = !e.value;
+  const rotationE = internalGizmo.gizmo.rotate.getObjectByName('E');
+  const pickerE = internalGizmo.picker.rotate.getObjectByName('E');
+  if (rotationE) rotationE.visible = false;
+  if (pickerE) pickerE.visible = false;
+  Object.defineProperty(rotationE, 'visible', {
+    get: () => false,
+    set: () => {}, // Ignore attempts to set it to true
+    configurable: true
   });
+  Object.defineProperty(pickerE, 'visible', {
+    get: () => false,
+    set: () => {}, // Ignore attempts to set it to true
+    configurable: true
+  });
+  console.log(`Rotation: ${rotationE.visible}, picker: ${pickerE.visible}`)
 }
 export function deactivateTransformControls() {
   if (transformControls) {
