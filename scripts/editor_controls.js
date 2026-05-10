@@ -15,6 +15,7 @@ export const editorControls = document.querySelector("#editor-controls");
 editorControls.style.display = 'None';
 
 export function setEditor(content_items) {
+  let focusedElement = null;
   for (const item of content_items) {
     let domElement;
     if (item.element == "property") {
@@ -24,6 +25,7 @@ export function setEditor(content_items) {
       const value = document.createElement('input');
       label.textContent = item.content;
       value.id = item.id;
+      value.classList.add('property');
       value.value = item.defaultValue;
       domElement.appendChild(label);
       domElement.appendChild(value);
@@ -60,12 +62,18 @@ export function setEditor(content_items) {
       if (item.class) domElement.classList.add(item.class);
       domElement.innerHTML = item.content;
     }
+    if (item.focused) {
+      focusedElement = item.id;
+    }
     editorControls.appendChild(domElement);
   }
   editorControls.style.display = 'flex';
+
+  if (focusedElement) document.getElementById(focusedElement).focus();
 }
 
 export function setTool(tool) {
+  if (activeTool === tool) return;
   editorControls.innerHTML = "";
   const selection = Object.values(selectedObjects);
   const mainSelection = selection[0];
@@ -75,7 +83,7 @@ export function setTool(tool) {
       case "move":
         setEditor([{ element: 'div', content: "Move Object" },
         { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: snap.translation, unit: 'mm' },
-        { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x, unit: 'mm' },
+        { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x, unit: 'mm', focused: 'true' },
         { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y, unit: 'mm' },
         { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z, unit: 'mm' },
         { element: 'confirmation', id: 'apply-pos' }
@@ -86,7 +94,7 @@ export function setTool(tool) {
         const size = getSize(mainSelection)
         setEditor([{ element: 'div', content: "Scale Object" },
         { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: snap.scale, unit: 'mm' },
-        { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm' },
+        { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm', focused: 'true' },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: size.y, unit: 'mm' },
         { element: 'property', content: "Z", id: "scale-z", defaultValue: size.z, unit: 'mm' },
         { element: 'confirmation', id: 'apply-scale' }
@@ -96,7 +104,7 @@ export function setTool(tool) {
       case "rotate":
         setEditor([{ element: 'div', content: "Rotate Object" },
         { element: 'property', content: "Snap amount", id: "snap_rot_amount", defaultValue: snap.rotation, unit: 'deg' },
-        { element: 'property', content: "X", id: "rot-x", defaultValue: radToDeg(mainSelection.rotation.x), unit: 'deg' },
+        { element: 'property', content: "X", id: "rot-x", defaultValue: radToDeg(mainSelection.rotation.x), unit: 'deg', focused: 'true' },
         { element: 'property', content: "Y", id: "rot-y", defaultValue: radToDeg(mainSelection.rotation.y), unit: 'deg' },
         { element: 'property', content: "Z", id: "rot-z", defaultValue: radToDeg(mainSelection.rotation.z), unit: 'deg' },
         { element: 'confirmation', id: 'apply-rot' }
@@ -228,3 +236,28 @@ editorControls.addEventListener('input', function (event) {
     updateTransform();
   }
 });
+
+editorControls.addEventListener('keyup', (e) => {
+  try {
+    if (e.key === "Tab" || e.key === "Enter") {
+      e.preventDefault();
+      const inputs = Array.from(editorControls.querySelectorAll('.property, .apply'));
+      const applyButton = editorControls.getElementsByClassName('apply')[0];
+      const currentIndex = inputs.indexOf(document.activeElement);
+
+      if (document.activeElement === applyButton && e.key === "Enter") {
+        applyButton.click();
+        return;
+      }
+
+      const nextIndex = currentIndex + 1;
+
+      if (nextIndex < inputs.length) {
+        inputs[nextIndex].focus();
+      }
+    }
+  } catch (error) {
+    console.log('an error occured durring editor controls key navigation');
+    console.log(error);
+  }
+})

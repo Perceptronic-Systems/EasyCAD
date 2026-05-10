@@ -1,14 +1,15 @@
 import { cubeTexture } from "three/tsl";
-import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeObject, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
+import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeObject, selectedObjects, shiftDown, ctrlDown, activeTool } from "./cad_tools.js";
 import { unselectTool, setTool } from "./editor_controls.js";
 
 document.addEventListener('keydown', (event) => {
-  event.preventDefault();
   switch (event.key.toLowerCase()) {
-    case "Escape":
+    case "escape":
+      event.preventDefault();
       unselectTool()
       break;
-    case 'Delete':
+    case 'delete':
+      event.preventDefault();
       if (confirm("Are you sure you would like to delete selected objects?")) {
         for (const name of Object.keys(selectedObjects)) {
           removeObject(name);
@@ -16,6 +17,7 @@ document.addEventListener('keydown', (event) => {
         deselectObjects();
       }
     case 'a':
+      event.preventDefault();
       if (ctrlDown) {
         if (!shiftDown) {
           selectAll();
@@ -34,6 +36,7 @@ document.addEventListener('keydown', (event) => {
       setTool('scale');
       break;
     case 'c':
+      event.preventDefault();
       if (ctrlDown) {
         copy();
       }
@@ -48,6 +51,7 @@ document.addEventListener('keydown', (event) => {
       if (ctrlDown) booleanToSelection('intersect', 'Combined Part');
       break;
     case 'v':
+      event.preventDefault();
       if (ctrlDown) {
         paste();
       }

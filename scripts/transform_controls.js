@@ -119,7 +119,6 @@ export function activateTransformControls(selectedMesh, mode) {
     set: () => {}, // Ignore attempts to set it to true
     configurable: true
   });
-  console.log(`Rotation: ${rotationE.visible}, picker: ${pickerE.visible}`)
 }
 export function deactivateTransformControls() {
   if (transformControls) {
