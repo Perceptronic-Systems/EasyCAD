@@ -72,7 +72,7 @@ transformControls.addEventListener('change', (e) => {
   const axis = transformControls.axis;
   const object = transformControls.object;
   let maxScale = 1;
-  if (!object) return;
+  if (!object || !transformControls.dragging) return;
 
   if (transformControls.mode === "scale") {
     switch (axis) {
