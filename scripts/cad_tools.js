@@ -4,13 +4,24 @@ import { transformControls, deactivateTransformControls } from './transform_cont
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { AxesHelper } from 'three/webgpu';
 
 export let activeTool = null;
 
 // Ground Plane
-export const gridHelper = new THREE.GridHelper(260, 26);
+export const gridHelper = new THREE.GridHelper(260, 26, 0x252525, 0x444444);
 gridHelper.name = 'grid';
 scene.add(gridHelper);
+const createAxis = (start, end, color) => {
+  const points = [new THREE.Vector3(...start), new THREE.Vector3(...end)];
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({ color: color });
+  return new THREE.Line(geometry, material);
+}
+const xAxis = createAxis([-130, 0, 0], [130, 0, 0], 0x992323);
+const zAxis = createAxis([0, 0, -130], [0, 0, 130], 0x2323f99);
+scene.add(xAxis);
+scene.add(zAxis);
 
 // Object creation, ensures all objects have different names
 export const objects = new Set([]);
