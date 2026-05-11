@@ -263,6 +263,31 @@ canvas {
   align-items: center;
 }
 
+.row h3 {
+  margin-right: auto;
+}
+
+#close-window {
+  position: absolute;
+  top: 0.5rem;
+  padding: 3px;
+  background-color:rgb(66, 69, 78);
+  font-size: 18pt;
+  height: 2rem;
+  width: 2rem;
+  text-align: center;
+  text-justify: center;
+  margin: 0rem;
+}
+
+#close-window:hover {
+  background-color:rgb(56, 58, 63);
+}
+
+#close-window:active {
+  background-color:rgb(40, 41, 45);
+}
+
 input {
   width: 5rem;
   color: black;

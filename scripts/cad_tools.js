@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
+export let activeTool = null;
 
 // Ground Plane
 export const gridHelper = new THREE.GridHelper(260, 26);
@@ -73,7 +74,6 @@ export function selectObject(objectName, keep = false) {
       deselectObjects();
       selectedObjects[objectName] = mesh
       if (activeTool !== null) {
-        console.log('active tool is not null');
         transformControls.detach();
         transformControls.attach(mesh);
       }
@@ -154,7 +154,6 @@ function raycast() {
 canvas.addEventListener('mousedown', onMouseDown);
 
 // Tool Functionality
-export let activeTool = null;
 export const setActiveTool = (tool) => {
   activeTool = tool;
 }

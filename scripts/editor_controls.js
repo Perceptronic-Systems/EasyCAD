@@ -44,13 +44,16 @@ export function setEditor(content_items) {
       checkbox.value = item.defaultValue;
       domElement.appendChild(label);
       domElement.appendChild(checkbox);
-    } else if (item.element == "close-window") {
+    } else if (item.element == "title") {
       domElement = document.createElement('div')
       domElement.classList.add('row');
       const close = document.createElement('button');
+      const title = document.createElement('h3');
+      title.textContent = item.defaultValue;
       close.id = 'close-window';
-      close.textContent = 'Close';
+      close.textContent = '×';
       close.classList.add('close');
+      domElement.appendChild(title);
       domElement.appendChild(close);
     } else if (item.element == "confirmation") {
       domElement = document.createElement('div')
@@ -89,33 +92,30 @@ export function setTool(tool) {
     setActiveTool(tool);
     switch (tool) {
       case "move":
-        setEditor([{ element: 'div', content: "Move Object" },
+        setEditor([{ element: 'title', defaultValue: 'Move Object' },
         { element: 'property', content: "Snap amount", id: "snap_pos_amount", defaultValue: snap.translation, unit: 'mm' },
         { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x, unit: 'mm', focused: 'true' },
         { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y, unit: 'mm' },
-        { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z, unit: 'mm' },
-        { element: 'close-window', id: 'close' }
+        { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z, unit: 'mm' }
         ]);
         activateTransformControls(mainSelection, 'translate');
         break;
       case "scale":
         const size = getSize(mainSelection)
-        setEditor([{ element: 'div', content: "Scale Object" },
+        setEditor([{ element: 'title', defaultValue: 'Scale Object' },
         { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: snap.scale, unit: 'mm' },
         { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm', focused: 'true' },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: size.y, unit: 'mm' },
-        { element: 'property', content: "Z", id: "scale-z", defaultValue: size.z, unit: 'mm' },
-        { element: 'close-window', id: 'close' }
+        { element: 'property', content: "Z", id: "scale-z", defaultValue: size.z, unit: 'mm' }
         ]);
         activateTransformControls(mainSelection, 'scale');
         break;
       case "rotate":
-        setEditor([{ element: 'div', content: "Rotate Object" },
+        setEditor([{ element: 'title', defaultValue: 'Rotate Object' },
         { element: 'property', content: "Snap amount", id: "snap_rot_amount", defaultValue: snap.rotation, unit: 'deg' },
         { element: 'property', content: "X", id: "rot-x", defaultValue: radToDeg(mainSelection.rotation.x), unit: 'deg', focused: 'true' },
         { element: 'property', content: "Y", id: "rot-y", defaultValue: radToDeg(mainSelection.rotation.y), unit: 'deg' },
-        { element: 'property', content: "Z", id: "rot-z", defaultValue: radToDeg(mainSelection.rotation.z), unit: 'deg' },
-        { element: 'close-window', id: 'close' }
+        { element: 'property', content: "Z", id: "rot-z", defaultValue: radToDeg(mainSelection.rotation.z), unit: 'deg' }
         ]);
         activateTransformControls(mainSelection, 'rotate');
         break
@@ -243,19 +243,19 @@ editorControls.addEventListener('keyup', (e) => {
     if (e.key === "Tab" || e.key === "Enter") {
       e.preventDefault();
       const inputs = Array.from(editorControls.querySelectorAll('.property, #close-window'));
-      const applyButton = editorControls.getElementsByClassName('apply')[0];
+      const closeWindow = editorControls.querySelector('#close-window');
       const currentIndex = inputs.indexOf(document.activeElement);
 
-      if (document.activeElement === applyButton && e.key === "Enter") {
-        applyButton.click();
+      if (document.activeElement === closeWindow && e.key === "Enter") {
+        closeWindow.click();
         return;
       }
 
-      const nextIndex = currentIndex + 1;
-
-      if (nextIndex < inputs.length) {
-        inputs[nextIndex].focus();
+      let nextIndex = currentIndex + 1;
+      if (nextIndex >= inputs.length) {
+        nextIndex = 0;
       }
+      inputs[nextIndex].focus();
     }
   } catch (error) {
     console.log('an error occured durring editor controls key navigation');
