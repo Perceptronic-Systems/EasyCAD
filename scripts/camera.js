@@ -51,7 +51,7 @@ const outlinePass = new OutlinePass(
   scene,
   camera
 );
-outlinePass.edgeStrength = 1.5;
+outlinePass.edgeStrength = 1.1;
 outlinePass.edgeGlow = 0.0;
 outlinePass.visibleEdgeColor.set('#d2fdff');
 composer.addPass(outlinePass);
@@ -59,12 +59,18 @@ const gammaPass = new ShaderPass(GammaCorrectionShader);
 composer.addPass(gammaPass);
 composer.setPixelRatio(window.devicePixelRatio);
 
+const selectionHighlight = 0x081115;
 export function outlineObject(mesh) {
   outlinePass.selectedObjects.push(mesh);
+  mesh.material.emissive.setHex(selectionHighlight);
 }
 
 export function clearOutlines() {
   outlinePass.selectedObjects = [];
+  const children = scene.children.filter(child => child.isMesh);
+  children.forEach(child => {
+    child.material.emissive.setHex(0x000000);
+  })
 }
 
 // View Selection

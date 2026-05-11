@@ -142,7 +142,7 @@ document.addEventListener('keyup', (event) => {
 
 // Raycasting
 const mouse = new THREE.Vector2();
-function onMouseDown(event) {
+function onMouseClick(event) {
   if (transformControls && transformControls.dragging) return;
   const rect = canvas.getBoundingClientRect();
   mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -162,7 +162,21 @@ function raycast() {
     deselectObjects();
   }
 }
-canvas.addEventListener('mousedown', onMouseDown);
+
+const mouseDownPos = { x: 0, y: 0 };
+const quickClickThreshold = 4;
+canvas.addEventListener('mousedown', (event) => {
+  mouseDownPos.x = event.clientX;
+  mouseDownPos.y = event.clientY;
+});
+
+canvas.addEventListener('mouseup', (event) => {
+  const deltaX = Math.abs(mouseDownPos.x - event.clientX);
+  const deltaY = Math.abs(mouseDownPos.y - event.clientY);
+  if (deltaX < quickClickThreshold && deltaY < quickClickThreshold) {
+    onMouseClick(event);
+  }
+})
 
 // Tool Functionality
 export const setActiveTool = (tool) => {
