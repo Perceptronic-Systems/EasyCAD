@@ -59,17 +59,27 @@ const gammaPass = new ShaderPass(GammaCorrectionShader);
 composer.addPass(gammaPass);
 composer.setPixelRatio(window.devicePixelRatio);
 
-const selectionHighlight = 0x081115;
+const selectionHighlight = {r: 0.01, g: 0.013, b: 0.02};
 export function outlineObject(mesh) {
   outlinePass.selectedObjects.push(mesh);
-  mesh.material.emissive.setHex(selectionHighlight);
+  const color = mesh.material.color;
+  mesh.userData.tag = 'highlighted';
+    
+  color.r = Math.min(1, color.r + selectionHighlight.r);
+  color.g = Math.min(1, color.g + selectionHighlight.g);
+  color.b = Math.min(1, color.b + selectionHighlight.b);
 }
 
 export function clearOutlines() {
   outlinePass.selectedObjects = [];
-  const children = scene.children.filter(child => child.isMesh);
+  const children = scene.children.filter(child => child.isMesh && child.userData.tag === 'highlighted');
   children.forEach(child => {
-    child.material.emissive.setHex(0x000000);
+    const color = child.material.color;
+    child.userData.tag = null;
+    
+    color.r = Math.min(1, color.r - selectionHighlight.r);
+    color.g = Math.min(1, color.g - selectionHighlight.g);
+    color.b = Math.min(1, color.b - selectionHighlight.b);
   })
 }
 
