@@ -60,11 +60,11 @@ composer.addPass(gammaPass);
 composer.setPixelRatio(window.devicePixelRatio);
 
 export function outlineObject(mesh) {
-    outlinePass.selectedObjects.push(mesh);
+  outlinePass.selectedObjects.push(mesh);
 }
 
 export function clearOutlines() {
-    outlinePass.selectedObjects = [];
+  outlinePass.selectedObjects = [];
 }
 
 // View Selection

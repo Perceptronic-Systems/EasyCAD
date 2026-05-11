@@ -1,4 +1,4 @@
-import { cancelEdit, selectedObjects, setActiveTool, activeTool } from "./cad_tools.js";
+import { selectedObjects, setActiveTool, activeTool } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
@@ -44,6 +44,14 @@ export function setEditor(content_items) {
       checkbox.value = item.defaultValue;
       domElement.appendChild(label);
       domElement.appendChild(checkbox);
+    } else if (item.element == "close-window") {
+      domElement = document.createElement('div')
+      domElement.classList.add('row');
+      const close = document.createElement('button');
+      close.id = 'close-window';
+      close.textContent = 'Close';
+      close.classList.add('close');
+      domElement.appendChild(close);
     } else if (item.element == "confirmation") {
       domElement = document.createElement('div')
       domElement.classList.add('row');
@@ -86,7 +94,7 @@ export function setTool(tool) {
         { element: 'property', content: "X", id: "pos-x", defaultValue: mainSelection.position.x, unit: 'mm', focused: 'true' },
         { element: 'property', content: "Y", id: "pos-y", defaultValue: mainSelection.position.y, unit: 'mm' },
         { element: 'property', content: "Z", id: "pos-z", defaultValue: mainSelection.position.z, unit: 'mm' },
-        { element: 'confirmation', id: 'apply-pos' }
+        { element: 'close-window', id: 'close' }
         ]);
         activateTransformControls(mainSelection, 'translate');
         break;
@@ -97,7 +105,7 @@ export function setTool(tool) {
         { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm', focused: 'true' },
         { element: 'property', content: "Y", id: "scale-y", defaultValue: size.y, unit: 'mm' },
         { element: 'property', content: "Z", id: "scale-z", defaultValue: size.z, unit: 'mm' },
-        { element: 'confirmation', id: 'apply-scale' }
+        { element: 'close-window', id: 'close' }
         ]);
         activateTransformControls(mainSelection, 'scale');
         break;
@@ -107,7 +115,7 @@ export function setTool(tool) {
         { element: 'property', content: "X", id: "rot-x", defaultValue: radToDeg(mainSelection.rotation.x), unit: 'deg', focused: 'true' },
         { element: 'property', content: "Y", id: "rot-y", defaultValue: radToDeg(mainSelection.rotation.y), unit: 'deg' },
         { element: 'property', content: "Z", id: "rot-z", defaultValue: radToDeg(mainSelection.rotation.z), unit: 'deg' },
-        { element: 'confirmation', id: 'apply-rot' }
+        { element: 'close-window', id: 'close' }
         ]);
         activateTransformControls(mainSelection, 'rotate');
         break
@@ -217,14 +225,7 @@ export function updateSelectionText() {
 document.addEventListener('click', function (event) {
   if (event.target) {
     switch (event.target.id) {
-      case 'cancel':
-        cancelEdit();
-        unselectTool();
-        break;
-      case 'apply-pos':
-      case 'apply-scale':
-      case 'apply-rot':
-        updateTransform();
+      case 'close-window':
         unselectTool();
         break;
     }
@@ -241,7 +242,7 @@ editorControls.addEventListener('keyup', (e) => {
   try {
     if (e.key === "Tab" || e.key === "Enter") {
       e.preventDefault();
-      const inputs = Array.from(editorControls.querySelectorAll('.property, .apply'));
+      const inputs = Array.from(editorControls.querySelectorAll('.property, #close-window'));
       const applyButton = editorControls.getElementsByClassName('apply')[0];
       const currentIndex = inputs.indexOf(document.activeElement);
 

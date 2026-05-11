@@ -8,6 +8,7 @@ import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
 // Ground Plane
 export const gridHelper = new THREE.GridHelper(260, 26);
+gridHelper.name = 'grid';
 scene.add(gridHelper);
 
 // Object creation, ensures all objects have different names
@@ -27,13 +28,18 @@ export function instantiateObject(mesh, name, selectOnFinish) {
 }
 
 // Primitive Functionality
-export const default_material = new THREE.MeshStandardMaterial({ color: 0x1b8237 });
+export const default_material = new THREE.MeshStandardMaterial({
+  color: 0x1b8237,
+  polygonOffset: true,
+  polygonOffsetFactor: 1,
+  polygonOffsetUnits: 1
+});
 export function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
   let mesh = null;
   if (shape == "cube" && size.length === 3) {
     mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
-  } else if (shape == "sphere" && size.length === 3) {
-    mesh = new THREE.Mesh(new THREE.SphereGeometry(size[0], size[1], size[2]), material);
+  } else if (shape == "sphere" && size.length === 2) {
+    mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(size[0], size[1]), material);
   } else if (shape == "cylinder" && size.length === 3) {
     mesh = new THREE.Mesh(new THREE.CylinderGeometry(size[0], size[1], size[2]), material);
   } else if (shape == "cone" && size.length === 3) {
@@ -67,6 +73,7 @@ export function selectObject(objectName, keep = false) {
       deselectObjects();
       selectedObjects[objectName] = mesh
       if (activeTool !== null) {
+        console.log('active tool is not null');
         transformControls.detach();
         transformControls.attach(mesh);
       }
@@ -82,6 +89,12 @@ export function selectAll() {
       selectObject(child.name, true);
     }
   })
+}
+
+export function deselectObjects() {
+  deactivateTransformControls();
+  clearOutlines();
+  selectedObjects = {};
 }
 
 // Copy, paste, and duplicate
@@ -128,44 +141,25 @@ function onMouseDown(event) {
 const raycaster = new THREE.Raycaster();
 function raycast() {
   raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && objects.has(child.name)), true);
-  if (intersects.length > 0 && activeTool == null) {
+  let intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && objects.has(child.name)), true);
+  if (intersects.length > 0) {
     const hit = intersects[0].object;
     selectObject(hit.name, shiftDown || ctrlDown);
   }
+  intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && (objects.has(child.name) || child.name === 'grid')), true);
+  if (intersects.length == 0 && activeTool === null) {
+    deselectObjects();
+  }
 }
-window.addEventListener('mousedown', onMouseDown);
+canvas.addEventListener('mousedown', onMouseDown);
 
 // Tool Functionality
-export let originPos = null;
-export let originScale = null;
-export let originRot = null;
 export let activeTool = null;
 export const setActiveTool = (tool) => {
-  if (activeTool !== tool) {
-    const mainSelection = Object.values(selectedObjects)[0];
-    originPos = mainSelection.position.clone();
-    originScale = mainSelection.scale.clone();
-    originRot = mainSelection.rotation.clone();
-  }
   activeTool = tool;
 }
 
 export const exporter = new STLExporter();
-
-export function cancelEdit() {
-  const mainSelection = Object.values(selectedObjects)[0];
-  mainSelection.position.copy(originPos);
-  mainSelection.scale.copy(originScale);
-  mainSelection.rotation.copy(originRot);
-}
-
-export function deselectObjects() {
-  deactivateTransformControls();
-  activeTool = null;
-  clearOutlines();
-  selectedObjects = {};
-}
 
 // Boolean Functionality
 const operations = {merge: ADDITION, subtract: SUBTRACTION, intersect: INTERSECTION}

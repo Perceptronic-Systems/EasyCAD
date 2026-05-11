@@ -65,12 +65,12 @@ cubeButton.addEventListener("click", () => {
 
 export const sphereButton = document.querySelector("#sphere");
 sphereButton.addEventListener("click", () => {
-  createPrimitive("Sphere", "sphere", [10, 32, 32], [0, 10, 0], default_material);
+  createPrimitive("Sphere", "sphere", [10, 8], [0, 10, 0], default_material);
 });
 
 export const cylinderButton = document.querySelector("#cylinder");
 cylinderButton.addEventListener("click", () => {
-  createPrimitive("Cylinder", "cylinder", [10, 10, 20], [0, 10, 0], default_material);
+  createPrimitive("Cylinder", "cylinder", [10, 10, 32], [0, 10, 0], default_material);
 });
 
 export const coneButton = document.querySelector("#cone");
