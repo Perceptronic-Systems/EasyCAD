@@ -124,7 +124,7 @@ export function defineSelectionGroup(group, selectedObjects) {
     avgPos.add(worldPos);
 
     if (count > 1) return;
-    
+
     const worldScale = new THREE.Vector3();
     mesh.getWorldScale(worldScale);
     avgScale.add(worldScale);
@@ -144,6 +144,9 @@ export function defineSelectionGroup(group, selectedObjects) {
   if (count === 1) {
     group.scale.copy(avgScale);
     group.quaternion.copy(avgQuat.normalize());
+  } else {
+    group.scale.set(1, 1, 1);
+    group.rotation.set(0, 0, 0);
   }
 
   selection.forEach(mesh => {
