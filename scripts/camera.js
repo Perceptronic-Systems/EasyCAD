@@ -51,9 +51,9 @@ const outlinePass = new OutlinePass(
   scene,
   camera
 );
-outlinePass.edgeStrength = 1.1;
+outlinePass.edgeStrength = 1.0;
 outlinePass.edgeGlow = 0.0;
-outlinePass.visibleEdgeColor.set('#d2fdff');
+outlinePass.visibleEdgeColor.set('#ffffb9');
 composer.addPass(outlinePass);
 const gammaPass = new ShaderPass(GammaCorrectionShader);
 composer.addPass(gammaPass);
@@ -73,7 +73,9 @@ export function outlineObject(mesh) {
 export function clearOutlines() {
   outlinePass.selectedObjects = [];
   const children = scene.children.filter(child => child.isMesh && child.userData.tag === 'highlighted');
+  if (children == null) return;
   children.forEach(child => {
+    if (child == null) return;
     const color = child.material.color;
     child.userData.tag = null;
     

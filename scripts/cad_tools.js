@@ -1,5 +1,5 @@
 import { scene, camera, renderer, canvas, outlineObject, clearOutlines, cameraControls} from './camera.js';
-import { transformControls, deactivateTransformControls } from './transform_controls.js'
+import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup } from './transform_controls.js'
 
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
@@ -35,18 +35,19 @@ export function instantiateObject(mesh, name, selectOnFinish) {
   mesh.name = tempName;
   scene.add(mesh);
   objects.add(tempName);
-  if (selectOnFinish) selectObject(tempName);
+  if (selectOnFinish) selectObjects([mesh]);
   return mesh;
 }
 
 // Primitive Functionality
 export const default_material = new THREE.MeshStandardMaterial({
-  color: 0x1b8237,
+  color: 0x374891,
   polygonOffset: true,
   polygonOffsetFactor: 1,
   polygonOffsetUnits: 1
 });
-export function createPrimitive(name, shape, size, position = [0, 0, 0], material = default_material, selectOnFinish = true) {
+export function createPrimitive(name, shape, size, position = [0, 0, 0], objectMaterial = default_material, selectOnFinish = true) {
+  let material = objectMaterial.clone();
   let mesh = null;
   if (shape == "cube" && size.length === 3) {
     mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
@@ -64,48 +65,64 @@ export function createPrimitive(name, shape, size, position = [0, 0, 0], materia
   mesh.position.set(position[0], position[1], position[2]);
   instantiateObject(mesh, name, selectOnFinish);
 }
-export function removeObject(objectName) {
-  const mesh = scene.getObjectByName(objectName);
-  scene.remove(mesh);
-  objects.delete(objectName);
-  if (mesh.geometry) mesh.geometry.dispose();
-  mesh.material = null;
+export function removeSelected() {
+  const meshes = selectionGroup.children;
+  deleteObjects(meshes);
+}
+
+export function deleteObjects(meshes) {
+  meshes.forEach(mesh => {
+    selectionGroup.remove(mesh);
+    objects.delete(mesh.name);
+    if (mesh.geometry) mesh.geometry.dispose();
+    mesh.material = null;
+  });
 }
 
 
 // Selection Functionality
 export let selectedObjects = {};
+export const selectionGroup = new THREE.Group();
+const transformHelper = new THREE.BoxHelper(selectionGroup, 0xffff00); // Yellow outline
+scene.add(transformHelper);
 
-export function selectObject(objectName, keep = false) {
-  const mesh = scene.getObjectByName(objectName);
-  if (mesh) {
-    if (keep) {
-      selectedObjects[objectName] = mesh;
-    } else {
-      deselectObjects();
-      selectedObjects[objectName] = mesh
-      if (activeTool !== null) {
-        transformControls.detach();
-        transformControls.attach(mesh);
-      }
+transformControls.addEventListener('change', (e) => {
+  transformHelper.update();
+})
+
+export function selectObjects(meshes, keep = false) {
+  if (meshes) {
+    console.log('ye');
+    deselectObjects(keep);
+    meshes.forEach(mesh => {
+      selectedObjects[mesh.name] = mesh
+      outlineObject(mesh);
+    });
+    defineSelectionGroup(selectionGroup, selectedObjects);
+    if (activeTool !== null) {
+      activateTransformControls(selectionGroup, selectedObjects, activeTool);
     }
-    outlineObject(mesh);
   }
+
 }
 
 export function selectAll() {
   deselectObjects();
-  scene.children.forEach((child) => {
-    if (objects.has(child.name)) {
-      selectObject(child.name, true);
-    }
-  })
+  selectObjects(scene.children.filter(child => objects.has(child.name)));
+  console.log(selectionGroup.children);
 }
 
-export function deselectObjects() {
+export function deselectObjects(keep=false) {
   deactivateTransformControls();
+  const meshesToReturn = [...selectionGroup.children];
+  meshesToReturn.forEach(mesh => {
+    scene.attach(mesh);
+  })
   clearOutlines();
-  selectedObjects = {};
+  if (!keep) {
+    selectedObjects = {};
+  }
+  transformHelper.visible = false;
 }
 
 // Copy, paste, and duplicate
@@ -152,12 +169,17 @@ function onMouseClick(event) {
 const raycaster = new THREE.Raycaster();
 function raycast() {
   raycaster.setFromCamera(mouse, camera);
-  let intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && objects.has(child.name)), true);
+  let meshes = [];
+  scene.traverse((child) => {
+    if (child.isMesh && objects.has(child.name)) {
+      meshes.push(child);
+    }
+  });
+  const intersects = raycaster.intersectObjects(meshes, true);
   if (intersects.length > 0) {
     const hit = intersects[0].object;
-    selectObject(hit.name, shiftDown || ctrlDown);
+    selectObjects([hit], shiftDown || ctrlDown);
   }
-  intersects = raycaster.intersectObjects(scene.children.filter(child => child.isMesh && (objects.has(child.name) || child.name === 'grid')), true);
   if (intersects.length == 0 && activeTool === null) {
     deselectObjects();
   }
@@ -202,6 +224,7 @@ export function booleanToSelection(operation_type, resultName) {
 function booleanOperation(operation, objectA, objectB, resultName) {
   const meshA = scene.getObjectByName(objectA);
   const meshB = scene.getObjectByName(objectB);
+  deleteObjects([meshA, meshB], true);
   const brushA = new Brush(meshA.geometry, meshA.material);
   const brushB = new Brush(meshB.geometry, meshB.material);
   brushA.position.copy(meshA.position);
@@ -215,10 +238,6 @@ function booleanOperation(operation, objectA, objectB, resultName) {
 
   const evaluator = new Evaluator();
   const result = evaluator.evaluate(brushA, brushB, operation);
-  removeObject(objectA);
-  removeObject(objectB);
-  result.name = resultName;
-  scene.add(result);
-  objects.add(resultName);
-  selectObject(resultName);
+  result.material = default_material.clone();
+  instantiateObject(result, resultName, true);
 }

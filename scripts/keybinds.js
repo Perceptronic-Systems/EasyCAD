@@ -1,4 +1,4 @@
-import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeObject, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
+import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
 import { unselectTool, setTool } from "./editor_controls.js";
 
 document.addEventListener('keydown', (event) => {
@@ -10,9 +10,7 @@ document.addEventListener('keydown', (event) => {
     case 'delete':
       event.preventDefault();
       if (confirm("Are you sure you would like to delete selected objects?")) {
-        for (const name of Object.keys(selectedObjects)) {
-          removeObject(name);
-        }
+        removeSelected();
         deselectObjects();
       }
     case 'a':
