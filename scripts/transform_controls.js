@@ -106,6 +106,10 @@ transformControls.addEventListener('dragging-changed', (e) => {
 });
 
 export function defineSelectionGroup(group, selectedObjects) {
+  const meshesToReturn = [...group.children];
+  meshesToReturn.forEach(mesh => {
+    scene.attach(mesh);
+  })
   deactivateTransformControls();
   if (scene.getObjectByName('selection-group')) {
     scene.remove(group);
@@ -117,6 +121,10 @@ export function defineSelectionGroup(group, selectedObjects) {
   const tempQuat = new THREE.Quaternion();
   const selection = Object.values(selectedObjects);
   const count = selection.length;
+  if (count > 1) {
+    group.scale.set(1, 1, 1);
+    group.rotation.set(0, 0, 0);
+  }
 
   selection.forEach(mesh => {
     const worldPos = new THREE.Vector3();
@@ -144,9 +152,6 @@ export function defineSelectionGroup(group, selectedObjects) {
   if (count === 1) {
     group.scale.copy(avgScale);
     group.quaternion.copy(avgQuat.normalize());
-  } else {
-    group.scale.set(1, 1, 1);
-    group.rotation.set(0, 0, 0);
   }
 
   selection.forEach(mesh => {

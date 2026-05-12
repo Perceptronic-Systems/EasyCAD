@@ -92,7 +92,6 @@ transformControls.addEventListener('change', (e) => {
 
 export function selectObjects(meshes, keep = false) {
   if (meshes) {
-    console.log('ye');
     deselectObjects(keep);
     meshes.forEach(mesh => {
       selectedObjects[mesh.name] = mesh
@@ -103,6 +102,7 @@ export function selectObjects(meshes, keep = false) {
       activateTransformControls(selectionGroup, selectedObjects, activeTool);
     }
   }
+  transformHelper.visible = true;
 
 }
 
@@ -118,8 +118,8 @@ export function deselectObjects(keep=false) {
   meshesToReturn.forEach(mesh => {
     scene.attach(mesh);
   })
-  clearOutlines();
   if (!keep) {
+    clearOutlines();
     selectedObjects = {};
   }
   transformHelper.visible = false;
@@ -224,9 +224,12 @@ export function booleanToSelection(operation_type, resultName) {
 function booleanOperation(operation, objectA, objectB, resultName) {
   const meshA = scene.getObjectByName(objectA);
   const meshB = scene.getObjectByName(objectB);
-  deleteObjects([meshA, meshB], true);
   const brushA = new Brush(meshA.geometry, meshA.material);
   const brushB = new Brush(meshB.geometry, meshB.material);
+  const meshesToReturn = [...selectionGroup.children];
+  meshesToReturn.forEach(mesh => {
+    scene.attach(mesh);
+  });
   brushA.position.copy(meshA.position);
   brushA.quaternion.copy(meshA.quaternion);
   brushA.scale.copy(meshA.scale);
@@ -238,6 +241,7 @@ function booleanOperation(operation, objectA, objectB, resultName) {
 
   const evaluator = new Evaluator();
   const result = evaluator.evaluate(brushA, brushB, operation);
+  deleteObjects([meshA, meshB], true);
   result.material = default_material.clone();
   instantiateObject(result, resultName, true);
 }

@@ -61,6 +61,7 @@ composer.setPixelRatio(window.devicePixelRatio);
 
 const selectionHighlight = {r: 0.01, g: 0.013, b: 0.02};
 export function outlineObject(mesh) {
+  if (mesh.userData.tag === 'highlighted') return;
   outlinePass.selectedObjects.push(mesh);
   const color = mesh.material.color;
   mesh.userData.tag = 'highlighted';
