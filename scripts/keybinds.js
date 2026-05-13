@@ -1,5 +1,7 @@
 import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
-import { unselectTool, setTool } from "./editor_controls.js";
+import { unselectTool, setTool, editorControls } from "./editor_controls.js";
+
+const primativesDropdown = document.getElementById('primatives-dropdown');
 
 document.addEventListener('keydown', (event) => {
   switch (event.key.toLowerCase()) {
@@ -13,6 +15,16 @@ document.addEventListener('keydown', (event) => {
         removeSelected();
         deselectObjects();
       }
+    case ' ':
+      event.preventDefault();
+      if (ctrlDown) {
+        if (primativesDropdown ) {
+          console.log('show dropdown')
+          primativesDropdown.style.display = 'flex';
+          primativesDropdown.children[0].focus();
+        }
+      }
+      break;
     case 'a':
       event.preventDefault();
       if (ctrlDown) {
@@ -65,6 +77,38 @@ document.addEventListener('keydown', (event) => {
         copy();
         paste();
       }
+  }
+  try {
+    if (event.key === "Tab" || event.key === "Enter" || ['ArrowUp', 'ArrowDown', 'ArrowRight', 'ArrowLeft'].includes(event.key)) {
+      event.preventDefault();
+      let inputs = [];
+      if (editorControls.contains(document.activeElement)) {
+        inputs = Array.from(editorControls.querySelectorAll('.property, #close-window'));
+      } else {
+        inputs = Array.from(document.activeElement.parentElement.querySelectorAll('button, input'))
+      }
+      if (!inputs) return;
+      const currentIndex = inputs.indexOf(document.activeElement);
+
+      if (document.activeElement.tagName === 'BUTTON' && event.key === "Enter") {
+        document.activeElement.click();
+        return;
+      }
+
+      let nextIndex = 0;
+      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+        nextIndex = currentIndex - 1;
+      } else {
+         nextIndex = currentIndex + 1;
+      }
+      if (nextIndex >= inputs.length) {
+        nextIndex = 0;
+      }
+      inputs[nextIndex].focus();
+    }
+  } catch (error) {
+    console.log('an error occured durring editor controls key navigation');
+    console.log(error);
   }
 
 });

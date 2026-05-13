@@ -18,6 +18,8 @@ export const mergeButton = document.querySelector("#merge");
 export const subtractButton = document.querySelector("#subtract");
 export const intersectionButton = document.querySelector("#intersect");
 export const exportButton = document.querySelector("#export");
+export const primativesButton = document.querySelector('#primatives-button');
+const primativesDropdown = document.getElementById('primatives-dropdown');
 
 moveButton.addEventListener("click", () => {
   setTool('move');
@@ -42,6 +44,19 @@ subtractButton.addEventListener("click", () => {
 intersectionButton.addEventListener("click", () => {
   booleanToSelection('intersect', 'Combined Part');
 });
+primativesButton.addEventListener('click', () => {
+  if (primativesDropdown.style.display !== 'flex') {
+    primativesDropdown.style.display = 'flex';
+    const firstChild = primativesDropdown.querySelectorAll('button, input')[0];
+    if (firstChild) firstChild.focus();
+  } else {
+    primativesDropdown.style.display = 'none';
+  }
+});
+
+primativesDropdown.addEventListener('click', (event) => {
+  primativesDropdown.style.display = 'none';
+})
 
 exportButton.addEventListener("click", () => {
   for (const mesh of Object.values(selectedObjects)) {

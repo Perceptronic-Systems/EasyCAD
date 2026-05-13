@@ -227,13 +227,21 @@ canvas {
   top: 3.5rem;
 }
 
+#primatives-button {
+  text-align: center;
+  text-justify: center;
+}
+
 .dropdown {
   position: relative;
   display: inline-block;
+  display: flex;
+  justify-content: center;
+  align-content: center;
 }
 
 .dropdown-content {
-  top: 3.2rem;
+  top: 2.8rem;
   left: 50%;
   transform: translateX(-50%);
   display: none;
@@ -245,11 +253,13 @@ canvas {
   border-radius: 0.35rem;
 }
 
+#primatives .dropdown .dropdown-content {
+  width: 100%;
+}
+
 .dropdown-content button {
   display: block;
 }
-
-.dropdown:hover .dropdown-content {display: flex;}
 
 .tooltip:hover .tooltip-text {
   display: flex;

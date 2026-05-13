@@ -227,28 +227,3 @@ editorControls.addEventListener('input', function (event) {
     updateTransform();
   }
 });
-
-editorControls.addEventListener('keyup', (e) => {
-  try {
-    if (e.key === "Tab" || e.key === "Enter") {
-      e.preventDefault();
-      const inputs = Array.from(editorControls.querySelectorAll('.property, #close-window'));
-      const closeWindow = editorControls.querySelector('#close-window');
-      const currentIndex = inputs.indexOf(document.activeElement);
-
-      if (document.activeElement === closeWindow && e.key === "Enter") {
-        closeWindow.click();
-        return;
-      }
-
-      let nextIndex = currentIndex + 1;
-      if (nextIndex >= inputs.length) {
-        nextIndex = 0;
-      }
-      inputs[nextIndex].focus();
-    }
-  } catch (error) {
-    console.log('an error occured durring editor controls key navigation');
-    console.log(error);
-  }
-})
