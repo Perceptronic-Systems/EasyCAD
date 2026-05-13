@@ -101,6 +101,8 @@ export function selectObjects(meshes, keep = false) {
     defineSelectionGroup(selectionGroup, selectedObjects);
     if (activeTool !== null) {
       activateTransformControls(selectionGroup, selectedObjects, activeTool);
+    } else {
+      deactivateTransformControls();
     }
   }
   transformHelper.visible = true;
