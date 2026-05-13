@@ -109,7 +109,7 @@ export function defineSelectionGroup(group, selectedObjects) {
   const meshesToReturn = [...group.children];
   meshesToReturn.forEach(mesh => {
     scene.attach(mesh);
-  })
+  });
   deactivateTransformControls();
   if (scene.getObjectByName('selection-group')) {
     scene.remove(group);

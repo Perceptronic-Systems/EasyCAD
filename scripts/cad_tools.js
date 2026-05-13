@@ -72,7 +72,8 @@ export function removeSelected() {
 
 export function deleteObjects(meshes) {
   meshes.forEach(mesh => {
-    selectionGroup.remove(mesh);
+    if (selectionGroup.getObjectByName(mesh.name)) selectionGroup.remove(mesh);
+    if (scene.getObjectByName(mesh.name)) scene.remove(mesh);
     objects.delete(mesh.name);
     if (mesh.geometry) mesh.geometry.dispose();
     mesh.material = null;
@@ -224,12 +225,12 @@ export function booleanToSelection(operation_type, resultName) {
 function booleanOperation(operation, objectA, objectB, resultName) {
   const meshA = scene.getObjectByName(objectA);
   const meshB = scene.getObjectByName(objectB);
-  const brushA = new Brush(meshA.geometry, meshA.material);
-  const brushB = new Brush(meshB.geometry, meshB.material);
   const meshesToReturn = [...selectionGroup.children];
   meshesToReturn.forEach(mesh => {
     scene.attach(mesh);
   });
+  const brushA = new Brush(meshA.geometry, meshA.material);
+  const brushB = new Brush(meshB.geometry, meshB.material);
   brushA.position.copy(meshA.position);
   brushA.quaternion.copy(meshA.quaternion);
   brushA.scale.copy(meshA.scale);
