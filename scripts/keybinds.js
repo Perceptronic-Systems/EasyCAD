@@ -1,9 +1,12 @@
+import { remove } from "three/examples/jsm/libs/tween.module.js";
 import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
+import { undo, redo, undoStack, redoStack, addObject, removeObjects, combineObjects } from './commands.js';
 import { unselectTool, setTool, editorControls } from "./editor_controls.js";
 
 const primativesDropdown = document.getElementById('primatives-dropdown');
 
 document.addEventListener('keydown', (event) => {
+  const selection = Object.values(selectedObjects);
   switch (event.key.toLowerCase()) {
     case "escape":
       event.preventDefault();
@@ -12,16 +15,28 @@ document.addEventListener('keydown', (event) => {
     case 'delete':
       event.preventDefault();
       if (confirm("Are you sure you would like to delete selected objects?")) {
-        removeSelected();
-        deselectObjects();
+        undoStack.push(new removeObjects(Object.values(selectedObjects)));
       }
     case ' ':
       event.preventDefault();
       if (ctrlDown) {
         if (primativesDropdown ) {
-          console.log('show dropdown')
           primativesDropdown.style.display = 'flex';
           primativesDropdown.children[0].focus();
+        }
+      }
+      break;
+    case 'z':
+      if (ctrlDown) {
+        event.preventDefault();
+        if (shiftDown) {
+          if (redoStack.length > 0) {
+            redo();
+          }
+        } else {
+          if (undoStack.length > 0) {
+            undo();
+          }
         }
       }
       break;
@@ -55,15 +70,15 @@ document.addEventListener('keydown', (event) => {
       break;
     case 'm':
       event.preventDefault();
-      if (ctrlDown) booleanToSelection('merge', 'Combined Part');
+      if (ctrlDown) undoStack.push(new combineObjects(selection[0], selection[1], 'merge', 'Combined Part'));
       break;
     case 'o':
       event.preventDefault();
-      if (ctrlDown) booleanToSelection('subtract', 'Combined Part');
+      if (ctrlDown) undoStack.push(new combineObjects(selection[0], selection[1], 'subtract', 'Combined Part'));
       break;
     case 'i':
       event.preventDefault();
-      if (ctrlDown) booleanToSelection('intersect', 'Combined Part');
+      if (ctrlDown) undoStack.push(new combineObjects(selection[0], selection[1], 'intersect', 'Combined Part'));
       break;
     case 'v':
       event.preventDefault();

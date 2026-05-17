@@ -106,11 +106,10 @@ transformControls.addEventListener('dragging-changed', (e) => {
 });
 
 export function defineSelectionGroup(group, selectedObjects) {
-  const meshesToReturn = [...group.children];
-  meshesToReturn.forEach(mesh => {
-    scene.attach(mesh);
-  });
   deactivateTransformControls();
+  while (group.children.length > 0) {
+    scene.attach(group.children[0]);
+  };
   if (scene.getObjectByName('selection-group')) {
     scene.remove(group);
   }

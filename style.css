@@ -5,9 +5,14 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: 'NerdFont';
+  src: url('./fonts/HackNerdFontMono-Regular.ttf') format('woff2');
+}
+
 * {
   color: white;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Arial, Helvetica, sans-serif, 'NerdFont';
 }
 
 body {
@@ -43,6 +48,7 @@ body {
   background: #3f444b;
   color: white;
   padding: 0px;
+  padding-left: 0.4rem;
   height: 3.5rem;
 }
 
@@ -60,6 +66,29 @@ button:hover {
 
 button:active {
   background: #2a66a6;
+}
+
+#undo-button, #redo-button {
+  background-color: transparent;
+  color: rgb(192, 192, 192);
+  font-size: 18pt;
+  text-align: center;
+  text-justify: center;
+  margin: 0.4rem;
+  padding: 0.4rem;
+}
+
+#undo-button:hover, #redo-button:hover {
+  color: rgb(181, 181, 181);
+}
+
+#undo-button:active, #redo-button:active {
+  color: rgb(70, 168, 206);
+}
+
+#undo-button:disabled, #redo-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .tool, .modifier {
@@ -119,7 +148,7 @@ button:active {
 
 .container {
   background-color: rgb(59, 62, 69);
-  margin-left: 5%;
+  margin-left: 1%;
   margin-right: 1%;
   height: 100%;
   width: 25%;

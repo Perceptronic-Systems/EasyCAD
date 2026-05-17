@@ -1,5 +1,6 @@
 import { setTool } from './editor_controls.js';
-import { createPrimitive, booleanToSelection, selectedObjects, exporter, default_material } from './cad_tools.js';
+import { booleanToSelection, selectedObjects, exporter, default_material } from './cad_tools.js';
+import { undo, redo, undoStack, redoStack, addPrimitive, removeObjects } from './commands.js';
 import { setCameraType } from './camera.js';
 
 // Camera type selector
@@ -20,6 +21,23 @@ export const intersectionButton = document.querySelector("#intersect");
 export const exportButton = document.querySelector("#export");
 export const primativesButton = document.querySelector('#primatives-button');
 const primativesDropdown = document.getElementById('primatives-dropdown');
+export const undoButton = document.getElementById('undo-button');
+export const redoButton = document.getElementById('redo-button');
+
+function updateUndoRedoButtons() {
+  undoButton.disabled = undoStack.length === 0;
+  redoButton.disabled = redoStack.length === 0;
+}
+
+undoButton.addEventListener('click', () => {
+  undo();
+  updateUndoRedoButtons();
+});
+
+redoButton.addEventListener('click', () => {
+  redo();
+  updateUndoRedoButtons();
+});
 
 moveButton.addEventListener("click", () => {
   setTool('move');
@@ -34,15 +52,18 @@ rotateButton.addEventListener("click", () => {
 });
 
 mergeButton.addEventListener("click", () => {
-  booleanToSelection('merge', 'Combined Part');
+  const selection = Object.values(selectedObjects);
+  undoStack.push(new combineObjects(selection[0], selection[1], 'merge', 'Combined Part'));
 });
 
 subtractButton.addEventListener("click", () => {
-  booleanToSelection('subtract', 'Combined Part');
+  const selection = Object.values(selectedObjects);
+  undoStack.push(new combineObjects(selection[0], selection[1], 'subtract', 'Combined Part'));
 });
 
 intersectionButton.addEventListener("click", () => {
-  booleanToSelection('intersect', 'Combined Part');
+  const selection = Object.values(selectedObjects);
+  undoStack.push(new combineObjects(selection[0], selection[1], 'intersect', 'Combined Part'));
 });
 primativesButton.addEventListener('click', () => {
   if (primativesDropdown.style.display !== 'flex') {
@@ -72,28 +93,28 @@ exportButton.addEventListener("click", () => {
 });
 
 
-// Primatives
+// Primitives
 export const cubeButton = document.querySelector("#cube");
 cubeButton.addEventListener("click", () => {
-  createPrimitive("Cube", "cube", [20, 20, 20], [0, 10, 0], default_material);
+  undoStack.push(new addPrimitive("Cube", "cube", [20, 20, 20], [0, 10, 0]));
 });
 
 export const sphereButton = document.querySelector("#sphere");
 sphereButton.addEventListener("click", () => {
-  createPrimitive("Sphere", "sphere", [10, 8], [0, 10, 0], default_material);
+  undoStack.push(new addPrimitive("Sphere", "sphere", [10, 8], [0, 10, 0]));
 });
 
 export const cylinderButton = document.querySelector("#cylinder");
 cylinderButton.addEventListener("click", () => {
-  createPrimitive("Cylinder", "cylinder", [10, 10, 32], [0, 10, 0], default_material);
+  undoStack.push(new addPrimitive("Cylinder", "cylinder", [10, 10, 32], [0, 10, 0]));
 });
 
 export const coneButton = document.querySelector("#cone");
 coneButton.addEventListener("click", () => {
-  createPrimitive("Cone", "cone", [10, 20, 32], [0, 10, 0], default_material);
+  undoStack.push(new addPrimitive("Cone", "cone", [10, 20, 32], [0, 10, 0]));
 });
 
 export const torusButton = document.querySelector("#torus");
 torusButton.addEventListener("click", () => {
-  createPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0], default_material);
+  undoStack.push(new addPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0]));
 });

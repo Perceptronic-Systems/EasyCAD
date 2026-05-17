@@ -1,4 +1,4 @@
-import { selectedObjects, setActiveTool, activeTool, selectionGroup } from "./cad_tools.js";
+import { selectedObjects, setActiveTool, activeTool, selectionGroup, transformHelper } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
@@ -162,6 +162,7 @@ export function updateEditorControls() {
 transformControls.addEventListener('objectChange', (event) => {
   updateEditorControls();
   updateSnap(selectionGroup);
+  transformHelper.update();
 });
 
 export function updateTransform() {
@@ -192,6 +193,7 @@ export function updateTransform() {
       selectionGroup.rotation.set(x_rot, y_rot, z_rot);
       break;
   }
+  transformHelper.update();
 }
 
 export function hideEditor() {

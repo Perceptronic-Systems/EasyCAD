@@ -25,7 +25,8 @@ scene.add(zAxis);
 
 // Object creation, ensures all objects have different names
 export const objects = new Set([]);
-export function instantiateObject(mesh, name, selectOnFinish) {
+export function instantiateObject(mesh, name, selectOnFinish=true, keep=false) {
+  if (!name) name = mesh.name;
   let i = 0;
   let tempName = name;
   while (scene.getObjectByName(tempName)) {
@@ -33,9 +34,9 @@ export function instantiateObject(mesh, name, selectOnFinish) {
     tempName = name + " " + i;
   }
   mesh.name = tempName;
-  scene.add(mesh);
+  scene.attach(mesh);
   objects.add(tempName);
-  if (selectOnFinish) selectObjects([mesh]);
+  if (selectOnFinish) selectObjects([mesh], keep);
   return mesh;
 }
 
@@ -63,7 +64,7 @@ export function createPrimitive(name, shape, size, position = [0, 0, 0], objectM
     return null;
   }
   mesh.position.set(position[0], position[1], position[2]);
-  instantiateObject(mesh, name, selectOnFinish);
+  return instantiateObject(mesh, name, selectOnFinish);
 }
 export function removeSelected() {
   const meshes = selectionGroup.children;
@@ -71,12 +72,12 @@ export function removeSelected() {
 }
 
 export function deleteObjects(meshes) {
+  deselectObjects();
   meshes.forEach(mesh => {
-    if (selectionGroup.getObjectByName(mesh.name)) selectionGroup.remove(mesh);
-    if (scene.getObjectByName(mesh.name)) scene.remove(mesh);
+    scene.remove(scene.getObjectByName(mesh.name));
     objects.delete(mesh.name);
     if (mesh.geometry) mesh.geometry.dispose();
-    mesh.material = null;
+    //mesh.material = null;
   });
 }
 
@@ -84,35 +85,38 @@ export function deleteObjects(meshes) {
 // Selection Functionality
 export let selectedObjects = {};
 export const selectionGroup = new THREE.Group();
-const transformHelper = new THREE.BoxHelper(selectionGroup, 0xffff00); // Yellow outline
+export const transformHelper = new THREE.BoxHelper(selectionGroup, 0xffff00); // Yellow outline
 scene.add(transformHelper);
 
-transformControls.addEventListener('change', (e) => {
-  transformHelper.update();
-})
+export function updateSelectionOutline() {
+  if (selectionGroup.children.length === 0) {
+    transformHelper.visible = false;
+    deactivateTransformControls();
+  } else {
+    transformHelper.visible = true;
+  }
+}
 
 export function selectObjects(meshes, keep = false) {
   if (meshes) {
     deselectObjects(keep);
-    meshes.forEach(mesh => {
+    meshes.filter(mesh => objects.has(mesh.name)).forEach(mesh => {
       selectedObjects[mesh.name] = mesh
       outlineObject(mesh);
     });
     defineSelectionGroup(selectionGroup, selectedObjects);
-    if (activeTool !== null) {
-      activateTransformControls(selectionGroup, selectedObjects, activeTool);
-    } else {
+    if (activeTool == null) {
       deactivateTransformControls();
     }
   }
   transformHelper.visible = true;
+  transformHelper.update();
 
 }
 
 export function selectAll() {
   deselectObjects();
   selectObjects(scene.children.filter(child => objects.has(child.name)));
-  console.log(selectionGroup.children);
 }
 
 export function deselectObjects(keep=false) {
@@ -214,23 +218,19 @@ export const exporter = new STLExporter();
 const operations = {merge: ADDITION, subtract: SUBTRACTION, intersect: INTERSECTION}
 
 export function booleanToSelection(operation_type, resultName) {
-  const operation = operations[operation_type];
-  let selectedNames = Object.keys(selectedObjects)
-  if (selectedNames.length > 2) {
+  let selection = Object.values(selectedObjects)
+  if (selection.length > 2) {
     alert("Sorry! For now boolean operations only support the selection of 2 objects at a time.");
-  } else if (selectedNames.length < 2) {
+  } else if (selection.length < 2) {
     alert("Whoops! You need to have 2 objects selected in order to use this operation.")
   } else {
-    booleanOperation(operation, selectedNames[0], selectedNames[1], resultName);
+    booleanOperation(operation_type, selection[0], selection[1], resultName);
   }
 }
-function booleanOperation(operation, objectA, objectB, resultName) {
-  const meshA = scene.getObjectByName(objectA);
-  const meshB = scene.getObjectByName(objectB);
-  const meshesToReturn = [...selectionGroup.children];
-  meshesToReturn.forEach(mesh => {
-    scene.attach(mesh);
-  });
+
+export function booleanOperation(operation_type, meshA, meshB, resultName) {
+  const operation = operations[operation_type];
+  deselectObjects();
   const brushA = new Brush(meshA.geometry, meshA.material);
   const brushB = new Brush(meshB.geometry, meshB.material);
   brushA.position.copy(meshA.position);
@@ -244,7 +244,8 @@ function booleanOperation(operation, objectA, objectB, resultName) {
 
   const evaluator = new Evaluator();
   const result = evaluator.evaluate(brushA, brushB, operation);
-  deleteObjects([meshA, meshB], true);
+  deleteObjects([meshA, meshB]);
   result.material = default_material.clone();
   instantiateObject(result, resultName, true);
+  return result;
 }

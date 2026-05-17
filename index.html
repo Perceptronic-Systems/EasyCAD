@@ -7,14 +7,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyCAD</title>
   <link rel="stylesheet" href="./style.css" />
-  <link rel="stylesheet" href="https://www.nerdfonts.com/assets/css/webfont.css" />
 </head>
 
 <body>
   <div id="main">
     <div id="header">
-      <h2 class="logo">EasyCAD</h2>
       <div id="toolbar">
+        <div>
+          <button id="undo-button" class="tooltip">󰕍
+            <div class="tooltip-text">(CTRL + Z) Undo</div>
+          </button>
+          <button id="redo-button" class="tooltip">󰑏
+            <div class="tooltip-text">(CTRL + Shift + Z) Redo</div>
+          </button>
+        </div>
         <div id="tools" class="container">
           <button class="tool tooltip" id="move">
             <div class="tooltip-text">(g) Move</div>
