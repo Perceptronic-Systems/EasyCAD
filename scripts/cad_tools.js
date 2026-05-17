@@ -135,9 +135,12 @@ export function deselectObjects(keep=false) {
 // Copy, paste, and duplicate
 let clipboard = {}
 export function copy() {
-  for (let [objectName, mesh] of Object.entries(selectedObjects)) {
+  const tempSelection = selectedObjects;
+  deselectObjects();
+  for (let [objectName, mesh] of Object.entries(tempSelection)) {
     clipboard[objectName] = mesh.clone();
   }
+  selectObjects(Object.values(tempSelection))
 }
 
 export function paste() {
