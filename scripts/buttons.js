@@ -1,14 +1,20 @@
 import { setTool } from './editor_controls.js';
 import { booleanToSelection, selectedObjects, exporter, default_material } from './cad_tools.js';
 import { undo, redo, undoStack, redoStack, addPrimitive, removeObjects } from './commands.js';
-import { setCameraType } from './camera.js';
+import { camera, setCameraType } from './camera.js';
 
 // Camera type selector
 export const canvas = document.querySelector('#bg');
 export const camSelector = document.querySelector('#cam-switch');
-camSelector.checked = true;
-camSelector.addEventListener('change', () => {
-  setCameraType(camSelector.checked);
+let cameraOrtho = true;
+camSelector.addEventListener('click', () => {
+  cameraOrtho = !cameraOrtho;
+  if (cameraOrtho) {
+    camSelector.textContent = 'Orthographic';
+  } else {
+    camSelector.textContent = 'Perspective'
+  }
+  setCameraType(cameraOrtho);
 });
 
 // Toolbar
