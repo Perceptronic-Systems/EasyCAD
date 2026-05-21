@@ -91,14 +91,14 @@ button:active {
   cursor: not-allowed;
 }
 
-.tool, .modifier {
+.tool, .modifier, #paint {
   width: 2.4rem;
   margin: 0.3rem;
   text-align: center;
   text-justify: center;
 }
 
-.tool, .modifier {
+.tool, .modifier, #paint {
   font-family: 'AdwaitaMonoNerdFont';
   font-size: 20px;
   padding-right: 10%;
@@ -109,20 +109,30 @@ button:active {
   color: rgb(68, 227, 68);
 }
 
+.tool-icon {
+  transform: translateY(-0.5rem);
+  padding: 0;
+  margin: 0;
+}
+
 #paint-button {
+  font-size: 30px;
   color: lightgrey;
-  font-weight: bold;
   background: linear-gradient(130deg, rgb(14, 128, 126), rgb(28, 61, 172), rgb(121, 22, 160));
 }
 
 #paint-button:hover {
   color: white;
-  background: #3d6289;
+  box-shadow: 1px 4px 6px rgb(50, 50, 50);
+  padding: 0.8rem;
+  margin: 0.4rem;
 }
 
 #paint-button:active {
   color: rgb(255, 255, 255);
-  background: #2a66a6;
+  background: #256fbf;
+  padding: 0.9rem;
+  margin: 0.3rem;
 }
 
 #color-picker {

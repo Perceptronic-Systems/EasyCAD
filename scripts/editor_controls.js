@@ -1,3 +1,4 @@
+import { color } from "three/tsl";
 import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
@@ -95,7 +96,7 @@ export function setTool(tool) {
   if (activeTool === tool) return;
   editorControls.innerHTML = "";
   const selection = Object.values(selectedObjects);
-  if (activeTool != tool && selection.length > 0) {
+  if (activeTool != tool && (selection.length > 0 || tool === 'paint')) {
     setActiveTool(tool);
     switch (tool) {
       case "move":
@@ -234,6 +235,9 @@ export function updateSelectionText() {
   if (buffer !== selectionText.textContent) {
     selectionText.textContent = buffer;
   }
+
+  const color_picker = document.getElementById('color-picker');
+  if (color_picker) color_picker.value = getObjectColor();
 }
 
 document.addEventListener('click', function (event) {

@@ -62,6 +62,10 @@ document.addEventListener('keydown', (event) => {
       event.preventDefault();
       setTool('scale');
       break;
+    case 'p':
+      event.preventDefault();
+      setTool('paint');
+      break;
     case 'c':
       event.preventDefault();
       if (ctrlDown) {
