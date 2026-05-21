@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 import { camera, cameraControls } from './camera.js';
+import { loader } from './cad_tools.js';
+import { MeshStandardMaterial } from 'three/webgpu';
+
+let isDragging = false;
+let startPointerX = 0;
+let startPointerY = 0;
+const CLICK_THRESHOLD = 1;
+
 
 const viewcubeCanvas = document.getElementById('viewcube-canvas');
 
@@ -72,7 +80,6 @@ function createFaceMaterial(text) {
 }
 
 // Order matters for multi-material BoxGeometry arrays: Right, Left, Top, Bottom, Front, Back
-const cubeGeometry = new THREE.BoxGeometry(1.4, 1.4, 1.4);
 const cubeMaterials = [
   createFaceMaterial('RIGHT'),
   createFaceMaterial('LEFT'),
@@ -82,14 +89,17 @@ const cubeMaterials = [
   createFaceMaterial('BACK')
 ];
 
-const viewCube = new THREE.Mesh(cubeGeometry, cubeMaterials);
-cubeScene.add(viewCube);
+let viewCube;
+loader.load('/EasyCAD/scripts/assets/viewcube.glb', (gltf) => {
+  gltf.scene.traverse((child) => {
+    viewCube = child;
+    viewCube.name = 'viewcube'
+    viewCube.scale.set(0.9, 0.9, 0.9);
+    viewCube.material = new MeshStandardMaterial({color: 0x919599});
+    cubeScene.add(viewCube);
+  })
+});
 
-// Add an underlying darker interior box to show behind the transparent rounded face corners
-const innerGeo = new THREE.BoxGeometry(1.35, 1.35, 1.35);
-const innerMat = new THREE.MeshBasicMaterial({ color: 0x232729 });
-const innerCube = new THREE.Mesh(innerGeo, innerMat);
-viewCube.add(innerCube);
 
 function snapNormalFromUV(normal, uv) {
   const res = normal.clone();
@@ -119,55 +129,131 @@ function snapNormalFromUV(normal, uv) {
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-viewcubeCanvas.addEventListener('pointerdown', onCubeClick);
+let initialClickX = 0;
+let initialClickY = 0;
+viewcubeCanvas.addEventListener('pointerdown', onCubePointerDown);
+window.addEventListener('pointermove', onCubePointerMove);
+window.addEventListener('pointerup', onCubePointerUp);
 
-function onCubeClick(event) {
-  rect = viewcubeCanvas.getBoundingClientRect();
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, cubeCamera);
-  const intersects = raycaster.intersectObject(viewCube);
+function onCubePointerDown(event) {
+  // Capture initial coordinate markers
+  startPointerX = event.clientX;
+  startPointerY = event.clientY;
+  initialClickX = event.clientX;
+  initialClickY = event.clientY;
+  isDragging = true;
   
-  if (intersects.length > 0) {
-    console.log('hit!');
-    
-    // Obtain face normal of the box geometry directly
-    const hitNormal = intersects[0].face.normal.clone();
-    hitNormal.transformDirection(viewCube.matrixWorld);
-    
-    // Fall back to uv checking if they hit close to an edge/corner region
-    const uv = intersects[0].uv;
-    const targetDirection = snapNormalFromUV(hitNormal, uv);
-    
-    rotateMainCameraTo(targetDirection);
+  // Set pointer capture to gracefully handle dragging off the canvas boundary
+  viewcubeCanvas.setPointerCapture(event.pointerId);
+}
+
+function onCubePointerMove(event) {
+  if (!isDragging) return;
+
+  const deltaX = event.clientX - startPointerX;
+  const deltaY = event.clientY - startPointerY;
+
+  // Check if pointer has moved past the click tolerance threshold
+  if (Math.abs(deltaX) > CLICK_THRESHOLD || Math.abs(deltaY) > CLICK_THRESHOLD) {
+    // 1. Kill any active snapping animations so they don't fight the user drag
+    isAnimating = false; 
+
+    // 2. Adjust main camera spherical coordinates based on mouse movement speed
+    const sensitivity = 0.005; 
+    cameraControls.theta += deltaX * sensitivity;
+    cameraControls.phi -= deltaY * sensitivity;
+
+    // Keep Phi within safe boundaries to prevent flipping upside down at poles
+    cameraControls.phi = Math.max(0.01, Math.min(Math.PI - 0.01, cameraControls.phi));
+
+    // Update markers for the next movement frame
+    startPointerX = event.clientX;
+    startPointerY = event.clientY;
   }
 }
 
-function rotateMainCameraTo(direction) {
-  // Convert the target directional vector into polar spherical coordinates (phi, theta)
-  // to feed back nicely into your cameraControls setup.
-  const radius = cameraControls.radius || 10;
-  
-  // Calculate Target Phi & Theta based on vector
-  const targetPhi = Math.acos(Math.max(-1, Math.min(1, direction.y)));
-  let targetTheta = Math.atan2(direction.z, direction.x);
+function onCubePointerUp(event) {
+  if (!isDragging) return;
+  isDragging = false;
+  viewcubeCanvas.releasePointerCapture(event.pointerId);
 
-  // Smoothly interpolate your main camera angles over your render loop
-  animateMainCamera(targetPhi, targetTheta);
+  // Calculate overall total distance traveled from initial click point
+  const totalDeltaX = event.clientX - initialClickX;
+  const totalDeltaY = event.clientY - initialClickY;
+  const totalDistance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+
+  // IF they barely moved, process this run as a standard quick face-alignment snap click!
+  if (totalDistance <= CLICK_THRESHOLD) {
+    rect = viewcubeCanvas.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, cubeCamera);
+    const intersects = raycaster.intersectObjects([viewCube]);
+    
+    if (intersects.length > 0) {
+      const hitNormal = intersects[0].face.normal.clone();
+      hitNormal.transformDirection(viewCube.matrixWorld);
+      const targetDirection = snapNormal(hitNormal);
+      rotateMainCameraTo(targetDirection);
+    }
+  }
 }
 
-function animateMainCamera(tPhi, tTheta) {
-  // Animate using a basic lerp inside your main requestAnimationFrame loop, 
-  // or pass these directly to a library like GSAP if you use one:
-  // gsap.to(cameraControls, { phi: tPhi, theta: tTheta, duration: 0.4 });
+function snapNormal(normal) {
+  const snap = (val) => (Math.abs(val) < 0.35 ? 0 : Math.sign(val));
+  return new THREE.Vector3(snap(normal.x), snap(normal.y), snap(normal.z)).normalize();
+}
+
+let isAnimating = false;
+let startPhi = 0, startTheta = 0;
+let targetPhi = 0, targetTheta = 0;
+let progress = 0;
+const ANIMATION_DURATION = 0.3; // Duration in seconds
+const timer = new THREE.Timer(); // Tracks delta time across frames
+
+function rotateMainCameraTo(direction) {
+  startPhi = cameraControls.phi;
+  startTheta = cameraControls.theta;
+
+  targetPhi = Math.acos(Math.max(-1, Math.min(1, direction.y)));
+  targetTheta = Math.atan2(direction.z, direction.x);
+
+  let deltaTheta = targetTheta - startTheta;
+  while (deltaTheta < -Math.PI) deltaTheta += Math.PI * 2;
+  while (deltaTheta > Math.PI) deltaTheta -= Math.PI * 2;
+  targetTheta = startTheta + deltaTheta;
+
+  progress = 0;
+  isAnimating = true;
   
-  // Fallback direct assignment if your camera controls update immediately:
-  cameraControls.phi = tPhi;
-  cameraControls.theta = tTheta;
+  timer.reset(); 
+}
+
+function animateMainCamera() {
+  if (!isAnimating) return;
+
+  timer.update(); 
+  
+  const dt = timer.getDelta(); 
+  
+  progress += dt / ANIMATION_DURATION;
+
+  if (progress >= 1) {
+    progress = 1;
+    isAnimating = false;
+  }
+
+  const ease = 1 - Math.pow(1 - progress, 3);
+
+  cameraControls.phi = THREE.MathUtils.lerp(startPhi, targetPhi, ease);
+  cameraControls.theta = THREE.MathUtils.lerp(startTheta, targetTheta, ease);
 }
 
 export function updateRotation() {
+    if (isAnimating) {
+        animateMainCamera();
+    }
     const x = cameraControls.radius * Math.sin(cameraControls.phi) * Math.cos(cameraControls.theta);
     const y = cameraControls.radius * Math.cos(cameraControls.phi);
     const z = cameraControls.radius * Math.sin(cameraControls.phi) * Math.sin(cameraControls.theta);

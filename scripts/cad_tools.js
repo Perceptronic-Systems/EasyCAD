@@ -4,11 +4,12 @@ import { transformControls, activateTransformControls, deactivateTransformContro
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { AxesHelper } from 'three/webgpu';
 
-import { updateRotation } from './viewcube.js';
-
 export let activeTool = null;
+export const loader = new GLTFLoader();
 
 // Ground Plane
 export const gridHelper = new THREE.GridHelper(260, 26, 0x252525, 0x444444);

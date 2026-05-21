@@ -25,10 +25,6 @@ const orthoCamera = new THREE.OrthographicCamera(
   1000);
 
 const perspCamera = new THREE.PerspectiveCamera(frustumSize * 2, aspectRatio, 0.001, 1000);
-perspCamera.position.set(25, 60, -75)
-perspCamera.lookAt(0, 0, 0);
-orthoCamera.position.copy(perspCamera.position);
-orthoCamera.quaternion.copy(perspCamera.quaternion);
 
 export let camera = orthoCamera;
 
@@ -130,14 +126,14 @@ class orbitControls {
     this.active = true;
     this.cam = cam;
     this.domElement = domElement;
-    this.target = new THREE.Vector3(0, 0, 0);
+    this.target = new THREE.Vector3(0, 5, 0);
     this.sensitivity = 0.005;
     this.panSpeed = 0.08;
     this.zoomSpeed = 0.1;
     this.zoomFactor = 80;
     this.zoomStart = -0.05;
     this.radius = 50;
-    this.theta = 0.5; // Horizontal orbit
+    this.theta = Math.PI * 2.25; // Horizontal orbit
     this.phi = 1.000; // Vertical orbit
     this.isDragging = false;
     this.prevMouse = { x: 0.00, y: 0.00 };
