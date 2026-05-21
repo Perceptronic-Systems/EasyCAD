@@ -6,46 +6,88 @@ export const snap = {translation: 5.0, scale: 5.0, rotation: 15};
 
 // Sets the size of the object in world units
 export function setSize(group, X, Y, Z) {
+  // 1. Force a matrix update so we get highly accurate current world sizes
+  group.updateMatrixWorld(true);
+  
   const size = getSize(group);
-  const scaleX = (X / size.x) || 1;
-  const scaleY = (Y / size.y) || 1;
-  const scaleZ = (Z / size.z) || 1;
+  
+  // 2. Prevent division by zero if an object has no width/height/depth
+  const scaleX = size.x === 0 ? 1 : (X / size.x) * group.scale.x;
+  const scaleY = size.y === 0 ? 1 : (Y / size.y) * group.scale.y;
+  const scaleZ = size.z === 0 ? 1 : (Z / size.z) * group.scale.z;
+  
   group.scale.set(scaleX, scaleY, scaleZ);
 }
 
-// Returns the size of the object in world units instead of multiplier percentage
+// Returns the true current size of the object in world units
 export function getSize(group) {
+  // Save current rotation and scale
   const originalRotation = group.rotation.clone();
+  
+  // Clear rotation to get an axis-aligned bounding box of the geometry shape
   group.rotation.set(0, 0, 0);
+  group.updateMatrixWorld(true); // Crucial: tell Three.js the rotation changed before measuring
+  
   const box = new THREE.Box3().setFromObject(group);
   const size = new THREE.Vector3();
   box.getSize(size);
-  const unitsX = group.scale.x * size.x;
-  const unitsY = group.scale.y * size.y;
-  const unitsZ = group.scale.z * size.z;
+  
+  // Restore original rotation
   group.rotation.copy(originalRotation);
-  return new THREE.Vector3(unitsX, unitsY, unitsZ);
+  group.updateMatrixWorld(true);
+  
+  // DO NOT multiply by group.scale here. box.setFromObject already accounts for scale.
+  return size;
 }
 
 export function updateSnap(group) {
+  if (!transformControls) return;
+  
   transformControls.setTranslationSnap(snap.translation);
-  transformControls.scaleSnap = null; // Disables the default scale snap method as it uses relative percentage instead of world units
-  scaleSnap(group);
+  transformControls.scaleSnap = null; 
+  
+  // Ensure we pass group, and only snap when the user is actively scaling
+  if (transformControls.mode === 'scale' && group) {
+    scaleSnap(group);
+  }
+  
   transformControls.setRotationSnap((snap.rotation * (Math.PI / 180)) % (2 * Math.PI));
 }
 
 export function scaleSnap(group) {
-  if (transformControls.mode === 'scale' && group) {
-    const currentScale = group.scale;
-    const originalRotation = group.rotation.clone();
-    group.rotation.set(0, 0, 0);
-    const box = new THREE.Box3().setFromObject(group);
-    const baseSize = new THREE.Vector3();
-    box.getSize(baseSize);
-    group.rotation.copy(originalRotation);
-    group.scale.x = (Math.round(baseSize.x / snap.scale) * snap.scale) * (currentScale.x / baseSize.x) || currentScale.x;
-    group.scale.y = (Math.round(baseSize.y / snap.scale) * snap.scale) * (currentScale.y / baseSize.y) || currentScale.y;
-    group.scale.z = (Math.round(baseSize.z / snap.scale) * snap.scale) * (currentScale.z / baseSize.z) || currentScale.z;
+  // To snap cleanly to world units, we need the "geometry size" if scale was 1,1,1
+  const originalRotation = group.rotation.clone();
+  const originalScale = group.scale.clone();
+  
+  // Reset both to get the raw, unscaled, unrotated base geometry size
+  group.rotation.set(0, 0, 0);
+  group.scale.set(1, 1, 1);
+  group.updateMatrixWorld(true);
+  
+  const box = new THREE.Box3().setFromObject(group);
+  const rawGeometrySize = new THREE.Vector3();
+  box.getSize(rawGeometrySize);
+  
+  // Restore original states immediately so we don't disrupt the render
+  group.rotation.copy(originalRotation);
+  group.scale.copy(originalScale);
+  group.updateMatrixWorld(true);
+
+  // Now calculate the snapped target world size, and convert that back to a scale multiplier
+  if (rawGeometrySize.x > 0) {
+    const currentWorldX = originalScale.x * rawGeometrySize.x;
+    const snappedWorldX = Math.round(currentWorldX / snap.scale) * snap.scale;
+    group.scale.x = snappedWorldX / rawGeometrySize.x;
+  }
+  if (rawGeometrySize.y > 0) {
+    const currentWorldY = originalScale.y * rawGeometrySize.y;
+    const snappedWorldY = Math.round(currentWorldY / snap.scale) * snap.scale;
+    group.scale.y = snappedWorldY / rawGeometrySize.y;
+  }
+  if (rawGeometrySize.z > 0) {
+    const currentWorldZ = originalScale.z * rawGeometrySize.z;
+    const snappedWorldZ = Math.round(currentWorldZ / snap.scale) * snap.scale;
+    group.scale.z = snappedWorldZ / rawGeometrySize.z;
   }
 }
 

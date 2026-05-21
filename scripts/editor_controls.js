@@ -157,6 +157,7 @@ export function updateEditorControls() {
             const x_size = editorControls.querySelector('#scale-x');
             const y_size = editorControls.querySelector('#scale-y');
             const z_size = editorControls.querySelector('#scale-z');
+            updateSnap(selectionGroup);
             const size = getSize(selectionGroup);
             x_size.value = size.x.toFixed(2);
             y_size.value = size.y.toFixed(2);
@@ -199,9 +200,7 @@ export function updateTransform() {
       const y_size = Number(document.querySelector('#scale-y').value) || 1;
       const z_size = Number(document.querySelector('#scale-z').value) || 1;
       snap.scale = Number(document.querySelector('#snap_scale_amount').value) || 0.0;
-      console.log(selectionGroup);
       setSize(selectionGroup, x_size, y_size, z_size);
-      updateSnap(selectionGroup);
       break;
     case 'rotate':
       const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 0;

@@ -19,7 +19,7 @@ cubeCamera.lookAt(0, 0, 0);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 cubeScene.add(ambientLight);
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
 dirLight.position.set(5, 10, 7);
 cubeScene.add(dirLight);
 

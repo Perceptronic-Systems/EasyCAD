@@ -243,6 +243,7 @@ canvas {
   right: 0;
   width: 13vw;
   height: 13vw;
+  opacity: 0.6;
 }
 
 .overlay {
