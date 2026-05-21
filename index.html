@@ -5,49 +5,83 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EasyCAD 0.0.0</title>
-  <script type="module" crossorigin src="/EasyCAD/assets/index-CieJyJv7.js"></script>
-  <link rel="stylesheet" crossorigin href="/EasyCAD/assets/index-Btj5glPl.css">
+  <title>EasyCAD</title>
+  <script type="module" crossorigin src="/EasyCAD/assets/index-Bksd2EnI.js"></script>
+  <link rel="stylesheet" crossorigin href="/EasyCAD/assets/index-DZGrOzjZ.css">
 </head>
 
 <body>
   <div id="main">
     <div id="header">
-      <h2 class="logo">EasyCAD 0.0.0</h2>
       <div id="toolbar">
+        <div>
+          <button id="undo-button" class="tooltip">󰕍
+            <div class="tooltip-text">(CTRL + Z) Undo</div>
+          </button>
+          <button id="redo-button" class="tooltip">󰑏
+            <div class="tooltip-text">(CTRL + Shift + Z) Redo</div>
+          </button>
+        </div>
         <div id="tools" class="container">
-          <button class="tool" id="move">Move</button>
-          <button class="tool" id="scale">Scale</button>
-          <button class="tool" id="rotate">Rotate</button>
+          <button class="tool tooltip" id="move">
+            <div class="tooltip-text">(g) Move</div>
+          </button>
+          <button class="tool tooltip" id="scale">󰩨
+            <div class="tooltip-text">(s) Scale</div>
+          </button>
+          <button class="tool tooltip" id="rotate">󰚪
+            <div class="tooltip-text">(r) Rotate</div>
+          </button>
+          <button class="tooltip" id="paint-button"><span class="tool-icon"></span>
+            <div class="tooltip-text">(p) Paint</div>
+          </button>
         </div>
         <div id="primatives" class="container">
-          <button class="primitive" id="cube">Cube</button>
-          <button class="primitive" id="sphere">Sphere</button>
-          <button class="primitive" id="cylinder">Cyllinder</button>
+          <div class="dropdown">
+            <button id="primatives-button" class="tooltip"> Add Shape
+              <div class="tooltip-text">(CTRL + Space) Add Shape</div>
+            </button>
+            <div class="dropdown-content" id="primatives-dropdown">
+              <button class="primitive" id="cube">󰆧   Cube</button>
+              <button class="primitive" id="sphere">󱥔   Sphere</button>
+              <button class="primitive" id="cylinder">󱥎   Cyllinder</button>
+              <button class="primitive" id="cone">󱥌   Cone</button>
+              <button class="primitive" id="torus">   Torus</button>
+            </div>
+          </div>
         </div>
         <div id="modifiers" class="container">
-          <button class="modifier" id="merge">Merge</button>
-          <button class="modifier" id="subtract">Subtract</button>
-          <button class="modifier" id="intersect">Intersect</button>
+          <button class="modifier tooltip" id="merge">󰕤
+            <div class="tooltip-text">(CTRL + m)
+              Merge</div>
+          </button>
+          <button class="modifier tooltip" id="subtract">󰕛
+            <div class="tooltip-text">(CTRL + o)
+              Subtract</div>
+          </button>
+          <button class="modifier tooltip" id="intersect">󰕝
+            <div class="tooltip-text">(CTRL + i)
+              Intersect</div>
+          </button>
         </div>
       </div>
-      <button id="export">🢳 Export Selected STLs</button>
+      <button id="export"><p id="download-icon">🢳</p><p id="download-text">Export Selected STLs</p></button>
     </div>
 
     <div id="viewport">
       <canvas id="bg"></canvas>
 
       <div class="overlay" id="editor-controls"></div>
+      <canvas id="viewcube-canvas"></canvas>
     </div>
 
 
     <footer id="footer">
-      <p id="selected">Nothing selected</p>
       <div id="camera-type">
-        <input type='checkbox' id="cam-switch">
-        <p>Orthographic</p>
+        <button id="cam-switch">Orthographic</button>
       </div>
       <p id="statement">EasyCAD 2026 All Rights Reserved</p>
+      <p id="selected">Nothing selected</p>
     </footer>
 
   </div>
