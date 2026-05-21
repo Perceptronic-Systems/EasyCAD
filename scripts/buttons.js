@@ -1,6 +1,6 @@
 import { setTool } from './editor_controls.js';
 import { booleanToSelection, selectedObjects, exporter, default_material } from './cad_tools.js';
-import { undo, redo, undoStack, redoStack, addPrimitive, removeObjects } from './commands.js';
+import { undo, redo, undoStack, redoStack, addPrimitive, removeObjects, combineObjects } from './commands.js';
 import { camera, setCameraType } from './camera.js';
 
 // Camera type selector

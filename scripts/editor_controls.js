@@ -40,7 +40,7 @@ export function setEditor(content_items) {
       const picker = document.createElement('input');
       picker.type = 'color';
       picker.id = item.id;
-      picker.value = '#3b82f6';
+      picker.value = getObjectColor();
       domElement.appendChild(picker);
     } else if (item.element == "checkbox") {
       domElement = document.createElement('div')
@@ -171,7 +171,7 @@ export function updateEditorControls() {
             break;
         case "paint":
           const color_picker = editorControls.querySelector('#color-picker');
-          color_picker.value = getObjectColors();
+          color_picker.value = getObjectColor();
           break;
         }
     }

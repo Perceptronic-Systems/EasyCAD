@@ -99,13 +99,14 @@ export function updateSelectionOutline() {
 
 export function selectObjects(meshes, keep = false) {
   if (meshes) {
+    paintColor = getObjectColor();
     deselectObjects(keep);
     meshes.filter(mesh => objects.has(mesh.name)).forEach(mesh => {
       selectedObjects[mesh.name] = mesh
       outlineObject(mesh);
     });
     defineSelectionGroup(selectionGroup, selectedObjects);
-    if (activeTool == null) {
+    if (activeTool == null || activeTool === 'paint') {
       deactivateTransformControls();
     }
   }
@@ -220,8 +221,8 @@ export let paintColor = "#F01515";
 export function getObjectColor() {
   let color = paintColor;
   let colors = []
-  matching = true;
-  Object.values(selectedObjects).forEach(mesh => colors.push(mesh.material.color));
+  let matching = true;
+  Object.values(selectedObjects).forEach(mesh => colors.push(`#${mesh.material.color.getHexString()}`));
   colors.forEach(c => {
     if (c !== colors[0]) {
       matching = false;

@@ -111,7 +111,8 @@ button:active {
 
 #paint-button {
   color: lightgrey;
-  background: linear-gradient(rgb(170, 25, 163), rgb(83, 154, 50));
+  font-weight: bold;
+  background: linear-gradient(130deg, rgb(14, 128, 126), rgb(28, 61, 172), rgb(121, 22, 160));
 }
 
 #paint-button:hover {
