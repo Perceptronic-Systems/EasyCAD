@@ -391,3 +391,7 @@ input {
   margin: 0px;
   justify-self: flex-start;
 }
+
+#cam-switch {
+  padding: 0.4rem;
+}
