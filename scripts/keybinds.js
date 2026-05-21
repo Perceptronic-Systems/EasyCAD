@@ -98,9 +98,10 @@ document.addEventListener('keydown', (event) => {
       }
   }
   try {
-    if (event.key === "Tab" || event.key === "Enter" || ['ArrowUp', 'ArrowDown', 'ArrowRight', 'ArrowLeft'].includes(event.key)) {
+    if (event.key === "Tab" || event.key === "Enter" || ['ArrowUp', 'ArrowDown'].includes(event.key)) {
       event.preventDefault();
       let inputs = [];
+      let nextIndex = 0;
       if (editorControls.contains(document.activeElement)) {
         inputs = Array.from(editorControls.querySelectorAll('.property, #close-window'));
       } else {
@@ -112,12 +113,13 @@ document.addEventListener('keydown', (event) => {
       if (document.activeElement.tagName === 'BUTTON' && event.key === "Enter") {
         document.activeElement.click();
         return;
+      } else {
+        nextIndex = currentIndex + 1;
       }
 
-      let nextIndex = 0;
-      if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      if (event.key === 'ArrowUp') {
         nextIndex = currentIndex - 1;
-      } else {
+      } else if (event.key === 'ArrowDown') {
          nextIndex = currentIndex + 1;
       }
       if (nextIndex >= inputs.length) {

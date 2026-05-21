@@ -90,7 +90,7 @@ const cubeMaterials = [
 ];
 
 let viewCube;
-loader.load('/EasyCAD/scripts/assets/viewcube.glb', (gltf) => {
+loader.load('./scripts/assets/viewcube.glb', (gltf) => {
   gltf.scene.traverse((child) => {
     viewCube = child;
     viewCube.name = 'viewcube'
