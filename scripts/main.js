@@ -3,6 +3,7 @@ import { createPrimitive, default_material, updateSelectionOutline } from './cad
 import { composer } from './camera.js';
 import { updateSelectionText } from './editor_controls.js';
 import { undoStack, redoStack, addPrimitive } from './commands.js';
+import { renderer as cubeRenderer, cubeCamera, cubeScene, updateRotation } from './viewcube.js';
 
 const undoButton = document.getElementById('undo-button');
 const redoButton = document.getElementById('redo-button');
@@ -21,6 +22,8 @@ function animate() {
   requestAnimationFrame(animate);
 
   composer.render();
+  updateRotation();
+  cubeRenderer.render(cubeScene, cubeCamera);
 }
 
 animate();

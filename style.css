@@ -237,11 +237,19 @@ canvas {
   position: relative;
 }
 
+#viewcube-canvas {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 13vw;
+  height: 13vw;
+}
+
 .overlay {
   margin: 0.8rem;
   padding: 0.4rem;
   position: absolute;
-  bottom: 0;
+  top: 0;
   right: 0;
   background-color: rgb(53, 53, 59);
   padding: 0.8rem;

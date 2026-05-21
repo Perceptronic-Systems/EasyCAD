@@ -6,6 +6,8 @@ import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { AxesHelper } from 'three/webgpu';
 
+import { updateRotation } from './viewcube.js';
+
 export let activeTool = null;
 
 // Ground Plane
