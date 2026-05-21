@@ -358,27 +358,36 @@ input {
 }
 
 #footer {
+  display: flex;
+  flex-direction: row;
   background: #3f444b;
   color: white;
-  padding: 0.4rem;
+  padding: 0.3rem 0.4rem 0.2rem 0.3rem;
   flex-shrink: 0;
+  align-items: center;
 }
 
 #footer * {
   font-size: 11pt;
-  float: right;
   margin: 0.8rem;
+  margin-top: 0px;
+  margin-bottom: 0px;
 }
 
 #statement {
   font-size: 9pt;
   color: grey;
-  float: left;
+  justify-self: flex-start;
+  align-self: center;
   margin-left: 5rem;
+}
+
+#selected {
+  margin-left: auto;
 }
 
 #camera-type {
   padding: 0px;
   margin: 0px;
-  float: left;
+  justify-self: flex-start;
 }
