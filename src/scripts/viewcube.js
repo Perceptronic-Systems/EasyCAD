@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { camera, cameraControls } from './camera.js';
 import { loader } from './cad_tools.js';
 import { MeshStandardMaterial } from 'three/webgpu';
-const viewcubeUrl = './assets/viewcube.glb';
+const viewcubeUrl = './viewcube.glb';
 
 let isDragging = false;
 let startPointerX = 0;
