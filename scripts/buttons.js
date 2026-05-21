@@ -29,6 +29,7 @@ export const primativesButton = document.querySelector('#primatives-button');
 const primativesDropdown = document.getElementById('primatives-dropdown');
 export const undoButton = document.getElementById('undo-button');
 export const redoButton = document.getElementById('redo-button');
+export const paintButton = document.getElementById('paint-button');
 
 function updateUndoRedoButtons() {
   undoButton.disabled = undoStack.length === 0;
@@ -56,6 +57,10 @@ scaleButton.addEventListener("click", () => {
 rotateButton.addEventListener("click", () => {
   setTool('rotate');
 });
+
+paintButton.addEventListener("click", () => {
+  setTool('paint');
+})
 
 mergeButton.addEventListener("click", () => {
   const selection = Object.values(selectedObjects);

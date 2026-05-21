@@ -1,4 +1,4 @@
-import { selectedObjects, setActiveTool, activeTool, selectionGroup, transformHelper } from "./cad_tools.js";
+import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
@@ -34,6 +34,14 @@ export function setEditor(content_items) {
         unit.textContent = item.unit;
         domElement.appendChild(unit);
       }
+    } else if (item.element == "color-picker") {
+      domElement = document.createElement('div');
+      domElement.classList.add('row');
+      const picker = document.createElement('input');
+      picker.type = 'color';
+      picker.id = item.id;
+      picker.value = '#3b82f6';
+      domElement.appendChild(picker);
     } else if (item.element == "checkbox") {
       domElement = document.createElement('div')
       domElement.classList.add('row');
@@ -117,7 +125,13 @@ export function setTool(tool) {
         { element: 'property', content: "Z", id: "rot-z", defaultValue: radToDeg(selectionGroup.rotation.z), unit: 'deg' }
         ]);
         activateTransformControls(selectionGroup, selectedObjects, 'rotate');
-        break
+        break;
+      case "paint":
+        setEditor([{ element: 'title', id: 'color-picker', defaultValue: 'Color Picker' },
+          {element: 'color-picker', id: 'color-picker' }
+        ]);
+        deactivateTransformControls();
+        break;
     }
   }
 }
@@ -155,6 +169,10 @@ export function updateEditorControls() {
             y_rot.value = radToDeg(selectionGroup.rotation.y);
             z_rot.value = radToDeg(selectionGroup.rotation.z);
             break;
+        case "paint":
+          const color_picker = editorControls.querySelector('#color-picker');
+          color_picker.value = getObjectColors();
+          break;
         }
     }
 }
@@ -191,6 +209,10 @@ export function updateTransform() {
       snap.rotation = Number(document.querySelector('#snap_rot_amount').value);
       updateSnap(selectionGroup);
       selectionGroup.rotation.set(x_rot, y_rot, z_rot);
+      break;
+    case 'paint':
+      const color_value = document.querySelector('#color-picker').value;
+      setObjectColor(color_value);
       break;
   }
   transformHelper.update();

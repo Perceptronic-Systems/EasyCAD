@@ -215,6 +215,29 @@ export const setActiveTool = (tool) => {
   activeTool = tool;
 }
 
+export let paintColor = "#F01515";
+
+export function getObjectColor() {
+  let color = paintColor;
+  let colors = []
+  matching = true;
+  Object.values(selectedObjects).forEach(mesh => colors.push(mesh.material.color));
+  colors.forEach(c => {
+    if (c !== colors[0]) {
+      matching = false;
+    }
+  })
+  if (matching) color = colors[0];
+  return color;
+}
+
+export function setObjectColor(color) {
+  paintColor = color;
+  Object.values(selectedObjects).forEach(mesh => {
+    mesh.material.color.set(paintColor);
+  })
+}
+
 export const exporter = new STLExporter();
 
 // Boolean Functionality
