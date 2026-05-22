@@ -1,18 +1,12 @@
 @font-face {
-  font-family: "AdwaitaMonoNerdFont";
-  src: url('./fonts/AdwaitaMonoNerdFont-Regular.ttf') format('truetype');
+  font-family: 'NerdFont';
+  src: url('./fonts/SymbolsNerdFont-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
-
-@font-face {
-  font-family: 'NerdFont';
-  src: url('./fonts/HackNerdFontMono-Regular.ttf') format('woff2');
-}
-
 * {
   color: white;
-  font-family: Arial, Helvetica, sans-serif, 'NerdFont', 'AdwaitaMonoNerdFont';
+  font-family: Arial, Helvetica, sans-serif, 'NerdFont';
 }
 
 body {
@@ -58,6 +52,13 @@ button {
   border-radius: 0.35rem;
   padding: 0.7rem;
   margin: 0.5rem;
+  display: flex;
+  justify-content: center;
+  align-content: center;
+}
+
+button img {
+  filter: invert(100%);
 }
 
 button:hover {
@@ -91,17 +92,16 @@ button:active {
   cursor: not-allowed;
 }
 
-.tool, .modifier, #paint {
+.tool, .modifier {
   width: 2.4rem;
   margin: 0.3rem;
   text-align: center;
   text-justify: center;
 }
 
-.tool, .modifier, #paint {
+.tool, .modifier {
   font-family: 'AdwaitaMonoNerdFont';
   font-size: 20px;
-  padding-right: 10%;
 }
 
 .tool {
@@ -113,26 +113,6 @@ button:active {
   transform: translateY(-0.5rem);
   padding: 0;
   margin: 0;
-}
-
-#paint-button {
-  font-size: 30px;
-  color: lightgrey;
-  background: linear-gradient(130deg, rgb(14, 128, 126), rgb(28, 61, 172), rgb(121, 22, 160));
-}
-
-#paint-button:hover {
-  color: white;
-  box-shadow: 1px 4px 6px rgb(50, 50, 50);
-  padding: 0.8rem;
-  margin: 0.4rem;
-}
-
-#paint-button:active {
-  color: rgb(255, 255, 255);
-  background: #256fbf;
-  padding: 0.9rem;
-  margin: 0.3rem;
 }
 
 #color-picker {
