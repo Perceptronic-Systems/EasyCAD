@@ -249,6 +249,10 @@ canvas {
   background-color: rgb(34, 110, 198);
 }
 
+#label-pos-x, #label-scale-x, #label-rot-x { color: red; }
+#label-pos-y, #label-scale-y, #label-rot-y { color: lime; }
+#label-pos-z, #label-scale-z, #label-rot-z { color: #1850f5; }
+
 .overlay * {
   margin: 0.4rem;
 }

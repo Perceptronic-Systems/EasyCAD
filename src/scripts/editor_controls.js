@@ -25,6 +25,7 @@ export function setEditor(content_items) {
       const label = document.createElement('span');
       const value = document.createElement('input');
       label.textContent = item.content;
+      label.id = "label-" + item.id;
       value.id = item.id;
       value.classList.add('property');
       value.value = item.defaultValue;
