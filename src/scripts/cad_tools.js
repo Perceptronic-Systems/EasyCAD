@@ -80,7 +80,7 @@ export function deleteObjects(meshes) {
     scene.remove(scene.getObjectByName(mesh.name));
     objects.delete(mesh.name);
     if (mesh.geometry) mesh.geometry.dispose();
-    //mesh.material = null;
+    mesh.material = null;
   });
 }
 

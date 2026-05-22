@@ -35,61 +35,6 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(rect.width, rect.height);
 renderer.setClearColor(0x000000, 0);
 
-function createFaceMaterial(text) {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  
-  // Clear layout transparent back
-  ctx.clearRect(0, 0, 128, 128);
-  
-  // Draw an emulated chamfered button look directly onto the texture canvas
-  const padding = 8;
-  const size = 128 - padding * 2;
-  const radius = 16; // Gives a beautiful rounded/beveled corner look
-  
-  ctx.fillStyle = '#5b6d74';
-  ctx.strokeStyle = '#232729';
-  ctx.lineWidth = 4;
-  
-  ctx.beginPath();
-  ctx.moveTo(padding + radius, padding);
-  ctx.lineTo(padding + size - radius, padding);
-  ctx.quadraticCurveTo(padding + size, padding, padding + size, padding + radius);
-  ctx.lineTo(padding + size, padding + size - radius);
-  ctx.quadraticCurveTo(padding + size, padding + size, padding + size - radius, padding + size);
-  ctx.lineTo(padding + radius, padding + size);
-  ctx.quadraticCurveTo(padding, padding + size, padding, padding + size - radius);
-  ctx.lineTo(padding, padding + radius);
-  ctx.quadraticCurveTo(padding, padding, padding + radius, padding);
-  ctx.closePath();
-  
-  ctx.fill();
-  ctx.stroke();
-  
-  // Text Properties
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 22px AdwaitaMonoNerdFont, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, 64, 64);
-  
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-}
-
-// Order matters for multi-material BoxGeometry arrays: Right, Left, Top, Bottom, Front, Back
-const cubeMaterials = [
-  createFaceMaterial('RIGHT'),
-  createFaceMaterial('LEFT'),
-  createFaceMaterial('TOP'),
-  createFaceMaterial('BOTTOM'),
-  createFaceMaterial('FRONT'),
-  createFaceMaterial('BACK')
-];
-
 let viewCube;
 loader.load(viewcubeUrl, (gltf) => {
   gltf.scene.traverse((child) => {

@@ -198,7 +198,6 @@ export function defineSelectionGroup(group, selectedObjects) {
   selection.forEach(mesh => {
     group.attach(mesh);
   });
-  transformControls.attach(group);
 }
 
 export function activateTransformControls(group, selectedObjects, mode) {
@@ -227,6 +226,7 @@ export function activateTransformControls(group, selectedObjects, mode) {
         configurable: true
       });
     }
+    transformControls.attach(group);
   } catch (error) {
     console.log('An error occured when activating/assigning the transform controls');
     console.log(error);
