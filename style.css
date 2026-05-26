@@ -55,6 +55,8 @@ button {
   display: flex;
   justify-content: center;
   align-content: center;
+  text-align: center;
+  text-justify: center;
 }
 
 button img {
@@ -92,8 +94,8 @@ button:active {
   cursor: not-allowed;
 }
 
-.tool, .modifier {
-  width: 2.4rem;
+.tool, .modifier, .pattern {
+  width: 2.6rem;
   margin: 0.3rem;
   text-align: center;
   text-justify: center;

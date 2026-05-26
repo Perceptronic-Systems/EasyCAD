@@ -1,5 +1,6 @@
 import { scene, camera, renderer, canvas, outlineObject, clearOutlines, cameraControls} from './camera.js';
 import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup } from './transform_controls.js'
+import { generateObjectPreview } from './object_previews.js';
 
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
@@ -27,18 +28,21 @@ scene.add(xAxis);
 scene.add(zAxis);
 
 // Object creation, ensures all objects have different names
-export const objects = new Set([]);
-export function instantiateObject(mesh, name, selectOnFinish=true, keep=false) {
-  if (!name) name = mesh.name;
+export function createName(name) {
   let i = 0;
   let tempName = name;
   while (scene.getObjectByName(tempName)) {
     i += 1;
     tempName = name + " " + i;
   }
-  mesh.name = tempName;
+  return tempName;
+}
+export const objects = new Set([]);
+export function instantiateObject(mesh, name, selectOnFinish=true, keep=false) {
+  if (!name) name = mesh.name;
+  mesh.name = createName(name);
   scene.attach(mesh);
-  objects.add(tempName);
+  objects.add(mesh.name);
   if (selectOnFinish) selectObjects([mesh], keep);
   return mesh;
 }
@@ -77,7 +81,11 @@ export function removeSelected() {
 export function deleteObjects(meshes) {
   deselectObjects();
   meshes.forEach(mesh => {
-    scene.remove(scene.getObjectByName(mesh.name));
+    if (scene.getObjectByName(mesh.name)) {
+      scene.remove(mesh);
+    } else if (selectionGroup.getObjectByName(mesh.name)) {
+      selectionGroup.remove(mesh)
+    }
     objects.delete(mesh.name);
     if (mesh.geometry) mesh.geometry.dispose();
     mesh.material = null;
@@ -134,6 +142,26 @@ export function deselectObjects(keep=false) {
     selectedObjects = {};
   }
   transformHelper.visible = false;
+}
+
+
+//Preview functionality
+export function clearPreviews() {
+  const previews = scene.children.filter(child => child.userData.tag === 'preview');
+  previews.forEach(preview => {
+    scene.remove(preview);
+  })
+}
+
+export function applyPreviews() {
+  const previews = scene.children.filter(child => child.userData.tag === 'preview');
+  previews.forEach(preview => {
+    preview.userData.tag = '';
+    preview.material = Object.values(selectedObjects)[0].material.clone();
+    objects.add(preview.name);
+  })
+  deleteObjects(Object.values(selectedObjects));
+  selectObjects(previews);
 }
 
 // Copy, paste, and duplicate
@@ -278,4 +306,46 @@ export function booleanOperation(operation_type, meshA, meshB, resultName) {
   result.material = default_material.clone();
   instantiateObject(result, resultName, true);
   return result;
+}
+
+export function generateCircularPattern(mesh, axis, radius, n, preview) {
+  if (preview) clearPreviews();
+  const center = new THREE.Vector3();
+  mesh.getWorldPosition(center);
+  const axes = ['x', 'y', 'z'].filter(a => a !== axis);
+  let meshes = [];
+  for (let i = 0; i < n; i++) {
+    let clone;
+    if (preview) {
+      clone = generateObjectPreview(mesh);
+    } else {
+      clone = mesh.clone();
+    }
+    let position = new THREE.Vector3();
+    const angle = (i / n) * Math.PI * 2;
+    position[axes[0]] = center[axes[0]] + Math.cos(angle) * radius;
+    position[axes[1]] = center[axes[1]] + Math.sin(angle) * radius;
+    position[axis] = center[axis];
+    clone.position.copy(position);
+
+    if (axis === 'y') clone.rotation[axis] = clone.rotation[axis] + (Math.PI) - angle;
+    if (axis === 'x' || axis === 'z') clone.rotation[axis] = clone.rotation[axis] + angle;
+
+    clone.name = createName(mesh.name);
+    if (preview) {
+      clone.userData.tag = 'preview';
+      scene.add(clone);
+    } else {
+      clone.material = clone.material.clone();
+      instantiateObject(clone);
+    }
+    meshes.push(clone);
+  }
+  if (!preview) {
+    deleteObjects([mesh]);
+    selectObjects(meshes);
+  } else {
+    mesh.visible = false;
+  }
+  return meshes
 }

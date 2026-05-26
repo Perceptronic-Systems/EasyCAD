@@ -30,6 +30,8 @@ const primativesDropdown = document.getElementById('primatives-dropdown');
 export const undoButton = document.getElementById('undo-button');
 export const redoButton = document.getElementById('redo-button');
 export const paintButton = document.getElementById('paint-button');
+export const circPatButton = document.getElementById('circular');
+export const rectPatButton = document.getElementById('rectangular');
 
 function updateUndoRedoButtons() {
   undoButton.disabled = undoStack.length === 0;
@@ -60,7 +62,7 @@ rotateButton.addEventListener("click", () => {
 
 paintButton.addEventListener("click", () => {
   setTool('paint');
-})
+});
 
 mergeButton.addEventListener("click", () => {
   const selection = Object.values(selectedObjects);
@@ -77,18 +79,29 @@ intersectionButton.addEventListener("click", () => {
   undoStack.push(new combineObjects(selection[0], selection[1], 'intersect', 'Combined Part'));
 });
 primativesButton.addEventListener('click', () => {
-  if (primativesDropdown.style.display !== 'flex') {
-    primativesDropdown.style.display = 'flex';
+  if (primativesDropdown.style.visibility !== 'visible') {
+    primativesDropdown.style.visibility = 'visible';
+    primativesDropdown.style.opacity = 1;
     const firstChild = primativesDropdown.querySelectorAll('button, input')[0];
     if (firstChild) firstChild.focus();
   } else {
-    primativesDropdown.style.display = 'none';
+    primativesDropdown.style.visibility = 'hidden';
+    primativesDropdown.style.opacity = 0;
   }
 });
 
 primativesDropdown.addEventListener('click', (event) => {
-  primativesDropdown.style.display = 'none';
+  primativesDropdown.style.visibility = 'hidden';
+  primativesDropdown.style.opacity = 0;
 })
+
+circPatButton.addEventListener("click", () => {
+  setTool('circular-pattern');
+});
+
+rectPatButton.addEventListener("click", () => {
+  setTool('rectangular-pattern');
+});
 
 exportButton.addEventListener("click", () => {
   for (const mesh of Object.values(selectedObjects)) {

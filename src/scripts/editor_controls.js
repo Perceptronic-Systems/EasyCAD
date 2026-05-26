@@ -1,9 +1,11 @@
 import { color } from "three/tsl";
-import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper } from "./cad_tools.js";
+import { scene } from './camera.js';
+import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper, generateCircularPattern, clearPreviews, applyPreviews } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';
+import { RectAreaLightTexturesLib } from "three/examples/jsm/lights/RectAreaLightTexturesLib.js";
 
 
 const defaultSelection = 'nothing selected';
@@ -68,14 +70,10 @@ export function setEditor(content_items) {
     } else if (item.element == "confirmation") {
       domElement = document.createElement('div')
       domElement.classList.add('row');
-      const cancel = document.createElement('button');
       const apply = document.createElement('button');
-      cancel.id = 'cancel';
-      cancel.innerHTML = "Cancel";
       apply.id = item.id;
       apply.classList.add('apply');
       apply.innerHTML = "Apply";
-      domElement.appendChild(cancel);
       domElement.appendChild(apply);
     } else {
       domElement = document.createElement(item.element);
@@ -129,10 +127,28 @@ export function setTool(tool) {
         activateTransformControls(selectionGroup, selectedObjects, 'rotate');
         break;
       case "paint":
-        setEditor([{ element: 'title', id: 'color-picker', defaultValue: 'Color Picker' },
+        setEditor([{ element: 'title', defaultValue: 'Color Picker' },
           {element: 'color-picker', id: 'color-picker' }
         ]);
         deactivateTransformControls();
+        break;
+      case "circular-pattern":
+        setEditor([{ element: 'title', defaultValue: 'Circular Pattern'},
+          { element: 'property', content: 'Axis', id: 'circ-pat-axis', defaultValue: "Y"},
+          { element: 'property', content: 'Radius', id: 'circ-pat-rad', defaultValue: 30, unit: 'mm', focused: true},
+          { element: 'property', content: 'Count', id: 'circ-pat-count', defaultValue: 6},
+          { element: 'confirmation', id: 'apply-circ-pat'}
+        ]);
+        updateTransform();
+        break;
+      case "rectangular-pattern":
+        setEditor([{ element: 'title', defaultValue: 'Rectangular Pattern'},
+          { element: 'property', content: 'Number of X', id: 'rect-pat-X', defaultValue: 2, focused: true},
+          { element: 'property', content: 'Number of Y', id: 'rect-pat-Y', defaultValue: 4},
+          { element: 'property', content: 'Spacing', id: 'rect-pat-spacing', defaultValue: 10, unit: 'mm'},
+          { element: 'confirmation', id: 'apply-circ-pat'}
+        ]);
+        updateTransform();
         break;
     }
   }
@@ -215,6 +231,12 @@ export function updateTransform() {
       const color_value = document.querySelector('#color-picker').value;
       setObjectColor(color_value);
       break;
+    case 'circular-pattern':
+      const axis = document.querySelector('#circ-pat-axis').value.toLowerCase() || 'y';
+      const radius = Number(document.querySelector('#circ-pat-rad').value) || 10;
+      const count = Number(document.querySelector('#circ-pat-count').value) || 6;
+      generateCircularPattern(Object.values(selectedObjects)[0], axis, radius, count, true);
+      break;
   }
   transformHelper.update();
 }
@@ -245,7 +267,14 @@ document.addEventListener('click', function (event) {
     switch (event.target.id) {
       case 'close-window':
         unselectTool();
+        clearPreviews();
+        Object.values(selectedObjects).forEach(mesh => {
+          mesh.visible = true;
+        })
         break;
+      case 'apply-circ-pat':
+        unselectTool();
+        applyPreviews();
     }
   }
 });
