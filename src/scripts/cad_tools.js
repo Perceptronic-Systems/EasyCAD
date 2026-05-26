@@ -101,6 +101,8 @@ export const selectionGroup = new THREE.Group();
 export const transformHelper = new THREE.BoxHelper(selectionGroup, 0xffff00); // Yellow outline
 scene.add(transformHelper);
 
+let test = 0;
+
 export function updateSelectionOutline() {
   if (selectionGroup.children.length === 0) {
     transformHelper.visible = false;
@@ -121,11 +123,12 @@ export function selectObjects(meshes, keep = false) {
     defineSelectionGroup(selectionGroup, selectedObjects);
     if (activeTool == null || activeTool === 'paint') {
       deactivateTransformControls();
+    } else {
+      transformControls.attach(selectionGroup);
     }
   }
   transformHelper.visible = true;
   transformHelper.update();
-
 }
 
 export function selectAll() {
