@@ -25,6 +25,8 @@ function animate() {
   composer.render();
   updateRotation();
   cubeRenderer.render(cubeScene, cubeCamera);
+  const children = scene.children.filter(child => child.name !== '' && child.name !== 'grid').map(mesh => mesh.name);
+  //console.log(children);
 }
 
 animate();

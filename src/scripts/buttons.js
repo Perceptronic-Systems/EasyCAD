@@ -1,7 +1,8 @@
-import { setTool } from './editor_controls.js';
-import { booleanToSelection, selectedObjects, exporter, default_material } from './cad_tools.js';
+import { editorControls, setTool, updateTransform, updateEditorControls, updateSelectionText, unselectTool } from './editor_controls.js';
+import { booleanToSelection, selectedObjects, exporter, default_material, applyPreviews, clearPreviews, activeTool } from './cad_tools.js';
 import { undo, redo, undoStack, redoStack, addPrimitive, removeObjects, combineObjects } from './commands.js';
 import { camera, setCameraType } from './camera.js';
+import { circularPattern, rectangularPattern } from './commands.js';
 
 // Camera type selector
 export const canvas = document.querySelector('#bg');
@@ -141,4 +142,42 @@ coneButton.addEventListener("click", () => {
 export const torusButton = document.querySelector("#torus");
 torusButton.addEventListener("click", () => {
   undoStack.push(new addPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0]));
+});
+
+document.addEventListener('click', function (event) {
+  if (event.target) {
+    switch (event.target.id) {
+      case 'close-window':
+        unselectTool();
+        clearPreviews();
+        Object.values(selectedObjects).forEach(mesh => {
+          mesh.visible = true;
+        })
+        break;
+      case 'apply-circ-pat':
+        const axis = document.querySelector('#circ-pat-axis').value.toLowerCase() || 'y';
+        const radius = Number(document.querySelector('#circ-pat-rad').value) || 10;
+        const count = Number(document.querySelector('#circ-pat-count').value) || 6;
+        clearPreviews();
+        undoStack.push(new circularPattern(Object.values(selectedObjects)[0], axis, radius, count))
+        unselectTool();
+        break;
+      case 'apply-rect-pat':
+        const plane = document.querySelector('#rect-pat-plane').value.toLowerCase() || 'xz';
+        const width = Number(document.querySelector('#rect-pat-width').value) || 140;
+        const countA = Number(document.querySelector('#rect-pat-count-a').value) || 2;
+        const length = Number(document.querySelector('#rect-pat-length').value) || 60;
+        const countB = Number(document.querySelector('#rect-pat-count-b').value) || 4;
+        clearPreviews();
+        undoStack.push(new rectangularPattern(Object.values(selectedObjects)[0], plane, width, countA, length, countB));
+        unselectTool();
+        break;
+    }
+  }
+});
+
+editorControls.addEventListener('input', function (event) {
+  if (event.target && activeTool !== null) {
+    updateTransform();
+  }
 });

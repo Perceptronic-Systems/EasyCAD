@@ -1,7 +1,7 @@
 import { select } from 'three/tsl';
 import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, selectionGroup, selectedObjects, transformHelper, deselectObjects, selectObjects } from './cad_tools.js';
 import { defineSelectionGroup, transformControls } from './transform_controls.js';
-import { generateCircularPattern } from './cad_tools.js';
+import { generateCircularPattern, generateRectangularPattern } from './cad_tools.js';
 import { scene } from './camera.js';
 
 export let undoStack = [];
@@ -186,7 +186,7 @@ export class circularPattern {
         this.axis = axis;
         this.radius = radius;
         this.n = n;
-        this.result;
+        this.execute();
     }
 
     execute() {
@@ -196,6 +196,40 @@ export class circularPattern {
     undo() {
         deleteObjects(this.result);
         this.mesh.material = this.material;
+        this.mesh.visible = true;
+        instantiateObject(this.mesh);
+        selectObjects([this.mesh]);
+        redoStack.push(this);
+    }
+}
+
+export class rectangularPattern {
+    constructor(mesh, plane, width, countA, length, countB) {
+        deselectObjects();
+        this.mesh = mesh.clone();
+        this.material = mesh.material.clone();
+        this.plane = plane;
+        this.width = width;
+        this.countA = countA;
+        this.length = length;
+        this.countB = countB;
+        this.execute();
+    }
+
+    execute() {
+        this.result = generateRectangularPattern(this.mesh,
+            this.plane,
+            this.width,
+            this.countA,
+            this.length,
+            this.countB,
+            false);
+    }
+
+    undo() {
+        deleteObjects(this.result);
+        this.mesh.material = this.material;
+        this.mesh.visible = true;
         instantiateObject(this.mesh);
         selectObjects([this.mesh]);
         redoStack.push(this);

@@ -1,6 +1,6 @@
 import { color } from "three/tsl";
 import { scene } from './camera.js';
-import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper, generateCircularPattern, clearPreviews, applyPreviews } from "./cad_tools.js";
+import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper, generateCircularPattern, generateRectangularPattern, clearPreviews, applyPreviews } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
@@ -36,8 +36,36 @@ export function setEditor(content_items) {
       if (item.unit) {
         const unit = document.createElement('span');
         unit.textContent = item.unit;
+        unit.classList.add('unit');
         domElement.appendChild(unit);
       }
+    } else if (item.element == "dropdown") {
+      domElement = document.createElement('div');
+      domElement.classList.add('row');
+      
+      if (item.content) {
+        const label = document.createElement('span');
+        label.textContent = item.content;
+        label.id = "label-" + item.id;
+        domElement.appendChild(label);
+      }
+
+      const select = document.createElement('select');
+      select.id = item.id;
+      select.classList.add('dropdown-menu');
+
+      if (item.options && Array.isArray(item.options)) {
+        for (const optionText of item.options) {
+          const option = document.createElement('option');
+          option.value = optionText;
+          option.textContent = optionText;
+          if (optionText === item.defaultValue) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        }
+      }
+      domElement.appendChild(select);
     } else if (item.element == "color-picker") {
       domElement = document.createElement('div');
       domElement.classList.add('row');
@@ -134,7 +162,7 @@ export function setTool(tool) {
         break;
       case "circular-pattern":
         setEditor([{ element: 'title', defaultValue: 'Circular Pattern'},
-          { element: 'property', content: 'Axis', id: 'circ-pat-axis', defaultValue: "Y"},
+          { element: 'dropdown', content: 'Axis', id: 'circ-pat-axis', defaultValue: "Y", options: ["X", "Y", "Z"]},
           { element: 'property', content: 'Radius', id: 'circ-pat-rad', defaultValue: 30, unit: 'mm', focused: true},
           { element: 'property', content: 'Count', id: 'circ-pat-count', defaultValue: 6},
           { element: 'confirmation', id: 'apply-circ-pat'}
@@ -143,10 +171,12 @@ export function setTool(tool) {
         break;
       case "rectangular-pattern":
         setEditor([{ element: 'title', defaultValue: 'Rectangular Pattern'},
-          { element: 'property', content: 'Number of X', id: 'rect-pat-X', defaultValue: 2, focused: true},
-          { element: 'property', content: 'Number of Y', id: 'rect-pat-Y', defaultValue: 4},
-          { element: 'property', content: 'Spacing', id: 'rect-pat-spacing', defaultValue: 10, unit: 'mm'},
-          { element: 'confirmation', id: 'apply-circ-pat'}
+          { element: 'dropdown', content: 'Plane', id: 'rect-pat-plane', defaultValue: "XZ", options: ["XZ", "XY", "YZ"]},
+          { element: 'property', content: 'Length', id: 'rect-pat-width', defaultValue: 60, unit: "mm", focused: true},
+          { element: 'property', content: 'Count', id: 'rect-pat-count-a', defaultValue: 2, unit: "units"},
+          { element: 'property', content: 'Width', id: 'rect-pat-length', defaultValue: 140, unit: "mm"},
+          { element: 'property', content: 'Count', id: 'rect-pat-count-b', defaultValue: 4, unit: "units"},
+          { element: 'confirmation', id: 'apply-rect-pat'}
         ]);
         updateTransform();
         break;
@@ -237,6 +267,14 @@ export function updateTransform() {
       const count = Number(document.querySelector('#circ-pat-count').value) || 6;
       generateCircularPattern(Object.values(selectedObjects)[0], axis, radius, count, true);
       break;
+    case 'rectangular-pattern':
+      const plane = document.querySelector('#rect-pat-plane').value.toLowerCase() || 'xz';
+      const width = Number(document.querySelector('#rect-pat-width').value) || 140;
+      const countA = Number(document.querySelector('#rect-pat-count-a').value) || 2;
+      const length = Number(document.querySelector('#rect-pat-length').value) || 60;
+      const countB = Number(document.querySelector('#rect-pat-count-b').value) || 4;
+      generateRectangularPattern(Object.values(selectedObjects)[0], plane, width, countA, length, countB, true);
+      break;
   }
   transformHelper.update();
 }
@@ -261,26 +299,3 @@ export function updateSelectionText() {
   const color_picker = document.getElementById('color-picker');
   if (color_picker) color_picker.value = getObjectColor();
 }
-
-document.addEventListener('click', function (event) {
-  if (event.target) {
-    switch (event.target.id) {
-      case 'close-window':
-        unselectTool();
-        clearPreviews();
-        Object.values(selectedObjects).forEach(mesh => {
-          mesh.visible = true;
-        })
-        break;
-      case 'apply-circ-pat':
-        unselectTool();
-        applyPreviews();
-    }
-  }
-});
-
-editorControls.addEventListener('input', function (event) {
-  if (event.target && activeTool !== null) {
-    updateTransform();
-  }
-});

@@ -1,5 +1,5 @@
 import { scene, camera, renderer, canvas, outlineObject, clearOutlines, cameraControls} from './camera.js';
-import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup } from './transform_controls.js'
+import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup, getSize } from './transform_controls.js'
 import { generateObjectPreview } from './object_previews.js';
 
 import * as THREE from 'three';
@@ -31,9 +31,11 @@ scene.add(zAxis);
 export function createName(name) {
   let i = 0;
   let tempName = name;
-  while (scene.getObjectByName(tempName)) {
-    i += 1;
-    tempName = name + " " + i;
+  if (scene.getObjectByName(tempName)) {
+    while (scene.getObjectByName(tempName)) {
+      i += 1;
+      tempName = name + " " + i;
+    }
   }
   return tempName;
 }
@@ -82,9 +84,9 @@ export function deleteObjects(meshes) {
   deselectObjects();
   meshes.forEach(mesh => {
     if (scene.getObjectByName(mesh.name)) {
-      scene.remove(mesh);
+      scene.remove(scene.getObjectByName(mesh.name));
     } else if (selectionGroup.getObjectByName(mesh.name)) {
-      selectionGroup.remove(mesh)
+      selectionGroup.remove(selectionGroup.getObjectByName(mesh.name))
     }
     objects.delete(mesh.name);
     if (mesh.geometry) mesh.geometry.dispose();
@@ -159,8 +161,7 @@ export function applyPreviews() {
     preview.userData.tag = '';
     preview.material = Object.values(selectedObjects)[0].material.clone();
     objects.add(preview.name);
-  })
-  deleteObjects(Object.values(selectedObjects));
+  });
   selectObjects(previews);
 }
 
@@ -332,6 +333,7 @@ export function generateCircularPattern(mesh, axis, radius, n, preview) {
     if (axis === 'x' || axis === 'z') clone.rotation[axis] = clone.rotation[axis] + angle;
 
     clone.name = createName(mesh.name);
+    clone.visible = true;
     if (preview) {
       clone.userData.tag = 'preview';
       scene.add(clone);
@@ -340,6 +342,52 @@ export function generateCircularPattern(mesh, axis, radius, n, preview) {
       instantiateObject(clone);
     }
     meshes.push(clone);
+  }
+  if (!preview) {
+    deleteObjects([mesh]);
+    selectObjects(meshes);
+  } else {
+    mesh.visible = false;
+  }
+  return meshes
+}
+
+export function generateRectangularPattern(mesh, plane, width, countA, length, countB, preview) {
+  if (preview) clearPreviews();
+  const axes = plane.toLowerCase().split('');
+  const size = getSize(mesh);
+  const stepA = countA > 1 && width > size[axes[0]] ? (width - size[axes[0]]) / (countA - 1) : 0;
+  const stepB = countB > 1 && length > size[axes[1]] ? (length - size[axes[1]]) / (countB - 1) : 0;
+  let meshes = [];
+  for (let i_a = 0; i_a < countA; i_a++) {
+    for (let i_b = 0; i_b < countB; i_b++) {
+      let clone;
+      if (preview) {
+        clone = generateObjectPreview(mesh);
+      } else {
+        clone = mesh.clone();
+      }
+      let newPosition = new THREE.Vector3();
+      mesh.getWorldPosition(newPosition);
+      newPosition[axes[0]] += stepA * i_a;
+      newPosition[axes[1]] += stepB * i_b;
+      clone.position.copy(newPosition);
+      clone.position.copy(newPosition);
+
+      clone.rotation.copy(mesh.rotation);
+      clone.scale.copy(mesh.scale);
+      clone.name = createName(mesh.name);
+      clone.visible = true;
+      if (preview) {
+        clone.userData.tag = 'preview';
+        scene.add(clone);
+      } else {
+        clone.material = clone.material.clone();
+        clone.visible = true;
+        instantiateObject(clone);
+      }
+      meshes.push(clone);
+    }
   }
   if (!preview) {
     deleteObjects([mesh]);
