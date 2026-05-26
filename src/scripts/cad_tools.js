@@ -305,16 +305,16 @@ export function booleanOperation(operation_type, meshes, resultName) {
     secondaryBrush.updateMatrixWorld();
 
     const evaluator = new Evaluator();
-    const result = evaluator.evaluate(baseBrush, secondaryBrush, operation);
+    result = evaluator.evaluate(baseBrush, secondaryBrush, operation);
     deleteObjects([baseMesh, secondaryMesh]);
     result.material = default_material.clone();
-    instantiateObject(result, resultName, true);
-    baseBrush = new Brush(baseMesh.geometry, baseMesh.material);
+    baseBrush = new Brush(result.geometry, result.material);
     baseBrush.position.copy(result.position);
     baseBrush.quaternion.copy(result.quaternion);
     baseBrush.scale.copy(result.scale);
     baseBrush.updateMatrixWorld();
   }
+  instantiateObject(result, resultName, true);
   return result;
 }
 
