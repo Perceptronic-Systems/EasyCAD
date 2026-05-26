@@ -67,17 +67,17 @@ paintButton.addEventListener("click", () => {
 
 mergeButton.addEventListener("click", () => {
   const selection = Object.values(selectedObjects);
-  undoStack.push(new combineObjects(selection[0], selection[1], 'merge', 'Combined Part'));
+  undoStack.push(new combineObjects(selection, 'merge', 'Combined Part'));
 });
 
 subtractButton.addEventListener("click", () => {
   const selection = Object.values(selectedObjects);
-  undoStack.push(new combineObjects(selection[0], selection[1], 'subtract', 'Combined Part'));
+  undoStack.push(new combineObjects(selection, 'subtract', 'Combined Part'));
 });
 
 intersectionButton.addEventListener("click", () => {
   const selection = Object.values(selectedObjects);
-  undoStack.push(new combineObjects(selection[0], selection[1], 'intersect', 'Combined Part'));
+  undoStack.push(new combineObjects(selection, 'intersect', 'Combined Part'));
 });
 primativesButton.addEventListener('click', () => {
   if (primativesDropdown.style.visibility !== 'visible') {

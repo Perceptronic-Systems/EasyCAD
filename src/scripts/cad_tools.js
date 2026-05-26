@@ -278,36 +278,47 @@ const operations = {merge: ADDITION, subtract: SUBTRACTION, intersect: INTERSECT
 
 export function booleanToSelection(operation_type, resultName) {
   let selection = Object.values(selectedObjects)
-  if (selection.length > 2) {
-    alert("Sorry! For now boolean operations only support the selection of 2 objects at a time.");
-  } else if (selection.length < 2) {
+  if (selection.length < 2) {
     alert("Whoops! You need to have 2 objects selected in order to use this operation.")
   } else {
-    booleanOperation(operation_type, selection[0], selection[1], resultName);
+    booleanOperation(operation_type, selection, resultName);
   }
 }
 
-export function booleanOperation(operation_type, meshA, meshB, resultName) {
+export function booleanOperation(operation_type, meshes, resultName) {
   const operation = operations[operation_type];
   deselectObjects();
-  const brushA = new Brush(meshA.geometry, meshA.material);
-  const brushB = new Brush(meshB.geometry, meshB.material);
-  brushA.position.copy(meshA.position);
-  brushA.quaternion.copy(meshA.quaternion);
-  brushA.scale.copy(meshA.scale);
-  brushA.updateMatrixWorld();
-  brushB.position.copy(meshB.position);
-  brushB.quaternion.copy(meshB.quaternion);
-  brushB.scale.copy(meshB.scale);
-  brushB.updateMatrixWorld();
+  const baseMesh = meshes[0]
+  let baseBrush = new Brush(baseMesh.geometry, baseMesh.material);
+  baseBrush.position.copy(baseMesh.position);
+  baseBrush.quaternion.copy(baseMesh.quaternion);
+  baseBrush.scale.copy(baseMesh.scale);
+  baseBrush.updateMatrixWorld();
+  let result;
 
-  const evaluator = new Evaluator();
-  const result = evaluator.evaluate(brushA, brushB, operation);
-  deleteObjects([meshA, meshB]);
-  result.material = default_material.clone();
-  instantiateObject(result, resultName, true);
+  for (let i = 1; i < meshes.length; i++) {
+    const secondaryMesh = meshes[i];
+    const secondaryBrush = new Brush(secondaryMesh.geometry, secondaryMesh.material);
+    secondaryBrush.position.copy(secondaryMesh.position);
+    secondaryBrush.quaternion.copy(secondaryMesh.quaternion);
+    secondaryBrush.scale.copy(secondaryMesh.scale);
+    secondaryBrush.updateMatrixWorld();
+
+    const evaluator = new Evaluator();
+    const result = evaluator.evaluate(baseBrush, secondaryBrush, operation);
+    deleteObjects([baseMesh, secondaryMesh]);
+    result.material = default_material.clone();
+    instantiateObject(result, resultName, true);
+    baseBrush = new Brush(baseMesh.geometry, baseMesh.material);
+    baseBrush.position.copy(result.position);
+    baseBrush.quaternion.copy(result.quaternion);
+    baseBrush.scale.copy(result.scale);
+    baseBrush.updateMatrixWorld();
+  }
   return result;
 }
+
+
 
 export function generateCircularPattern(mesh, axis, radius, n, preview) {
   if (preview) clearPreviews();

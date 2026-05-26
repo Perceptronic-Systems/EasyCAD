@@ -153,27 +153,23 @@ export class setRotation {
 }
 
 export class combineObjects {
-    constructor(meshA, meshB, operation, resultName) {
-        if (!meshA || !meshB) console.log('Error, cannot combine objects, mesh(s) are missing!');
+    constructor(meshes, operation, resultName) {
+        if (!meshes) console.log('Error, cannot combine objects, meshes are missing!');
         deselectObjects();
-        this.meshA = meshA.clone();
-        this.meshB = meshB.clone();
-        this.materialA = meshA.material.clone();
-        this.materialB = meshB.material.clone();
+        this.meshes = meshes;
         this.operation = operation;
         this.resultName = resultName;
         this.execute();
     }
     execute() {
-        this.result = booleanOperation(this.operation, this.meshA, this.meshB, this.resultName);
+        this.result = booleanOperation(this.operation, this.meshes, this.resultName);
     }
     undo() {
         deleteObjects([this.result])
-        this.meshA.material = this.materialA;
-        this.meshB.material = this.materialB;
-        instantiateObject(this.meshA);
-        instantiateObject(this.meshB);
-        selectObjects([this.meshA, this.meshB]);
+        this.meshes.forEach(mesh => {
+            instantiateObject(mesh);
+        });
+        selectObjects(this.meshes);
         redoStack.push(this);
     }
 }
