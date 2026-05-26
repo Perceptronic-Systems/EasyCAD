@@ -21,7 +21,8 @@ document.addEventListener('keydown', (event) => {
       event.preventDefault();
       if (ctrlDown) {
         if (primativesDropdown ) {
-          primativesDropdown.style.display = 'flex';
+          primativesDropdown.style.visibility = 'visible';
+          primativesDropdown.style.opacity = 1;
           primativesDropdown.children[0].focus();
         }
       }
@@ -74,15 +75,15 @@ document.addEventListener('keydown', (event) => {
       break;
     case 'm':
       event.preventDefault();
-      if (ctrlDown) undoStack.push(new combineObjects(selection[0], selection[1], 'merge', 'Combined Part'));
+      if (ctrlDown) undoStack.push(new combineObjects(selection, 'merge', 'Combined Part'));
       break;
     case 'o':
       event.preventDefault();
-      if (ctrlDown) undoStack.push(new combineObjects(selection[0], selection[1], 'subtract', 'Combined Part'));
+      if (ctrlDown) undoStack.push(new combineObjects(selection, 'subtract', 'Combined Part'));
       break;
     case 'i':
       event.preventDefault();
-      if (ctrlDown) undoStack.push(new combineObjects(selection[0], selection[1], 'intersect', 'Combined Part'));
+      if (ctrlDown) undoStack.push(new combineObjects(selection, 'intersect', 'Combined Part'));
       break;
     case 'v':
       event.preventDefault();
