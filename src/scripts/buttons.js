@@ -79,7 +79,10 @@ intersectionButton.addEventListener("click", () => {
   const selection = Object.values(selectedObjects);
   undoStack.push(new combineObjects(selection, 'intersect', 'Combined Part'));
 });
-primativesButton.addEventListener('click', () => {
+primativesButton.addEventListener('click', (event) => {
+  // Prevent this click from immediately triggering the document listener below
+  event.stopPropagation(); 
+  
   if (primativesDropdown.style.visibility !== 'visible') {
     primativesDropdown.style.visibility = 'visible';
     primativesDropdown.style.opacity = 1;
@@ -91,6 +94,13 @@ primativesButton.addEventListener('click', () => {
   }
 });
 
+document.addEventListener('click', (event) => {
+  // Check if the click happened OUTSIDE both the button and the dropdown
+  if (!primativesButton.contains(event.target) && !primativesDropdown.contains(event.target)) {
+    primativesDropdown.style.visibility = 'hidden';
+    primativesDropdown.style.opacity = 0;
+  }
+});
 primativesDropdown.addEventListener('click', (event) => {
   primativesDropdown.style.visibility = 'hidden';
   primativesDropdown.style.opacity = 0;

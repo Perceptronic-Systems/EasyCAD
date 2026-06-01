@@ -226,7 +226,8 @@ function raycast() {
     const hit = intersects[0].object;
     selectObjects([hit], shiftDown || ctrlDown);
   }
-  if (intersects.length == 0 && (activeTool === null || activeTool === 'paint')) {
+  if (intersects.length == 0) {
+    activeTool = null;
     deselectObjects();
   }
 }

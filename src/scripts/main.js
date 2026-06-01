@@ -1,7 +1,7 @@
 import { update } from 'three/examples/jsm/libs/tween.module.js';
-import { createPrimitive, default_material, updateSelectionOutline } from './cad_tools.js';
+import { createPrimitive, default_material, updateSelectionOutline, activeTool } from './cad_tools.js';
 import { composer, scene } from './camera.js';
-import { updateSelectionText } from './editor_controls.js';
+import { unselectTool, updateSelectionText, hideEditor } from './editor_controls.js';
 import { undoStack, redoStack, addPrimitive, circularPattern } from './commands.js';
 import { renderer as cubeRenderer, cubeCamera, cubeScene, updateRotation } from './viewcube.js';
 
@@ -26,7 +26,9 @@ function animate() {
   updateRotation();
   cubeRenderer.render(cubeScene, cubeCamera);
   const children = scene.children.filter(child => child.name !== '' && child.name !== 'grid').map(mesh => mesh.name);
-  //console.log(children);
+  if (activeTool === null) {
+    unselectTool();
+  }
 }
 
 animate();
