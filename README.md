@@ -1,8 +1,8 @@
-# EasyCAD Documentation
+# EasyCAD
 
-This repository contains the source code for EasyCAD, a minimalistic Computer-Aided Design (CAD) software intended to enable makers to bring their ideas into reality using basic geometric shapes and manipulation tools.
+A minimalistic Computer-Aided Design (CAD) software intended to enable makers to bring their ideas into reality using basic geometric shapes and manipulation tools.
 
-## Project Overview
+## Overview
 
 EasyCAD is a web-based application built using Three.js for 3D rendering and implemented with custom JavaScript modules for interactive control, command execution, and file export.
 

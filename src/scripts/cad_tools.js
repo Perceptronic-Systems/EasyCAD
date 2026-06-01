@@ -42,8 +42,8 @@ export function createName(name) {
 export const objects = new Set([]);
 export function instantiateObject(mesh, name, selectOnFinish=true, keep=false) {
   if (!name) name = mesh.name;
-  mesh.name = createName(name);
   scene.attach(mesh);
+  mesh.name = createName(name);
   objects.add(mesh.name);
   if (selectOnFinish) selectObjects([mesh], keep);
   return mesh;

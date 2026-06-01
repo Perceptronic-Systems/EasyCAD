@@ -157,6 +157,7 @@ export class combineObjects {
         if (!meshes) console.log('Error, cannot combine objects, meshes are missing!');
         deselectObjects();
         this.meshes = meshes;
+        this.materials = meshes.map(mesh => mesh.material.clone());
         this.operation = operation;
         this.resultName = resultName;
         this.execute();
@@ -166,7 +167,8 @@ export class combineObjects {
     }
     undo() {
         deleteObjects([this.result])
-        this.meshes.forEach(mesh => {
+        this.meshes.forEach((mesh, i) => {
+            mesh.material = this.materials[i];
             instantiateObject(mesh);
         });
         selectObjects(this.meshes);
