@@ -35,6 +35,10 @@ export function getSize(group) {
   // Restore original rotation
   group.rotation.copy(originalRotation);
   group.updateMatrixWorld(true);
+
+  size.x = parseFloat(size.x.toFixed(2));
+  size.y = parseFloat(size.y.toFixed(2));
+  size.z = parseFloat(size.z.toFixed(2));
   
   // DO NOT multiply by group.scale here. box.setFromObject already accounts for scale.
   return size;
@@ -157,7 +161,7 @@ export function defineSelectionGroup(group, selectedObjects) {
   }
   scene.add(group);
   let avgPos = new THREE.Vector3(0, 0, 0);
-  let avgScale = new THREE.Vector3(0, 0, 0);
+  //let avgScale = new THREE.Vector3(0, 0, 0);
   const avgQuat = new THREE.Quaternion(0, 0, 0, 0);
   const tempQuat = new THREE.Quaternion();
   const selection = Object.values(selectedObjects);
@@ -174,9 +178,9 @@ export function defineSelectionGroup(group, selectedObjects) {
 
     if (count > 1) return;
 
-    const worldScale = new THREE.Vector3();
-    mesh.getWorldScale(worldScale);
-    avgScale.add(worldScale);
+    //const worldScale = new THREE.Vector3();
+    //mesh.getWorldScale(worldScale);
+    //avgScale.add(worldScale);
     
     mesh.getWorldQuaternion(tempQuat);
     if (avgQuat.dot(tempQuat) < 0) {
@@ -189,10 +193,10 @@ export function defineSelectionGroup(group, selectedObjects) {
     avgQuat.w += tempQuat.w;
   })
   group.position.copy(avgPos.divideScalar(count));
-  avgScale = avgScale.divideScalar(count)
+  //avgScale = avgScale.divideScalar(count)
   if (count === 1) {
-    group.scale.copy(avgScale);
-    group.quaternion.copy(avgQuat.normalize());
+    //group.scale.copy(avgScale);
+    //group.quaternion.copy(avgQuat.normalize());
   }
 
   selection.forEach(mesh => {

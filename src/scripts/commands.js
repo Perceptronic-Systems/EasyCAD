@@ -1,11 +1,15 @@
 import { select } from 'three/tsl';
 import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, selectionGroup, selectedObjects, transformHelper, deselectObjects, selectObjects } from './cad_tools.js';
-import { defineSelectionGroup, transformControls } from './transform_controls.js';
-import { generateCircularPattern, generateRectangularPattern } from './cad_tools.js';
+import { activateTransformControls, defineSelectionGroup, transformControls } from './transform_controls.js';
+import { generateCircularPattern, generateRectangularPattern, activeTool, clipboard, createName } from './cad_tools.js';
 import { scene } from './camera.js';
 
 export let undoStack = [];
 export let redoStack = [];
+
+function getMesh(uuid) {
+    return scene.getObjectByProperty('uuid', uuid);
+}
 
 export function undo() {
     if (undoStack.length === 0) return;
@@ -38,6 +42,9 @@ transformControls.addEventListener('mouseDown', (e) => {
 });
 
 transformControls.addEventListener('mouseUp', (e) => {
+    const mode = transformControls.getMode();
+    defineSelectionGroup(selectionGroup, selectedObjects);
+    activateTransformControls(selectionGroup, selectedObjects, mode);
     mouseDown = false;
     const userData = transformControls.object.userData;
     if (!userData.oldPos) return;
@@ -59,20 +66,36 @@ export class addPrimitive {
         this.execute();
     }
     execute() {
-        this.mesh = createPrimitive(this.meshName, this.type, this.size, this.position);
+        this.meshID = createPrimitive(this.meshName, this.type, this.size, this.position).uuid;
     }
     undo() {
-        deleteObjects([this.mesh]);
+        deleteObjects([getMesh(this)]);
+        redoStack.push(this);
+    }
+}
+
+export class paste {
+    constructor() {
+        this.clipboard = Object.values(clipboard).map(mesh => mesh.clone());
+        this.clipboard.forEach(mesh => mesh.material = mesh.material.clone());
+        this.execute();
+    }
+    execute() {
+        this.clipboard.forEach(mesh => instantiateObject(mesh, createName(mesh.name)));
+    }
+    undo() {
+        deleteObjects([this.clipboard]);
         redoStack.push(this);
     }
 }
 
 export class addObject {
-    constructor(mesh, meshName) {
-        this.mesh = mesh;
+    constructor(mesh, meshName, execute=true) {
+        this.mesh = mesh.clone();
+        this.mesh.material = mesh.material.clone();
         this.mesh.name = meshName;
         this.meshName = meshName;
-        this.execute();
+        if (execute) this.execute();
     }
     execute() {
         instantiateObject(this.mesh, this.meshName);
@@ -85,7 +108,8 @@ export class addObject {
 
 export class removeObjects {
     constructor(meshes) {
-        this.meshes = meshes;
+        this.meshes = meshes.map(mesh => mesh.clone());
+        this.meshes.forEach((mesh, i) => mesh.material = meshes[i].material.clone());
         this.execute();
     }
     execute() {
@@ -106,48 +130,48 @@ export class removeObjects {
 
 export class setPosition {
     constructor(mesh, oldPos, newPos) {
-        this.mesh = mesh;
+        this.meshID = mesh.uuid;
         this.newPos = newPos;
         this.oldPos = oldPos;
         this.execute();
     }
     execute() {
-        this.mesh.position.copy(this.newPos);
+        getMesh(this.meshID).position.copy(this.newPos);
     }
     undo() {
-        this.mesh.position.copy(this.oldPos);
+        getMesh(this.meshID).position.copy(this.oldPos);
         redoStack.push(this);
     }
 }
 
 export class setScale {
     constructor(mesh, oldScale, newScale) {
-        this.mesh = mesh;
+        this.meshID = mesh.uuid;
         this.oldScale = oldScale;
         this.newScale = newScale;
         this.execute();
     }
     execute() {
-        this.mesh.scale.copy(this.newScale);
+        getMesh(this.meshID).scale.copy(this.newScale);
     }
     undo() {
-        this.mesh.scale.copy(this.oldScale);
+        getMesh(this.meshID).scale.copy(this.oldScale);
         redoStack.push(this);
     }
 }
 
 export class setRotation {
     constructor(mesh, oldRot, newRot) {
-        this.mesh = mesh;
+        this.meshID = mesh.uuid;
         this.oldRot = oldRot;
         this.newRot = newRot;
         this.execute();
     }
     execute() {
-        this.mesh.rotation.copy(this.newRot);
+        getMesh(this.meshID).rotation.copy(this.newRot);
     }
     undo() {
-        this.mesh.rotation.copy(this.oldRot);
+        getMesh(this.meshID).rotation.copy(this.oldRot);
         redoStack.push(this);
     }
 }
@@ -156,19 +180,18 @@ export class combineObjects {
     constructor(meshes, operation, resultName) {
         if (!meshes) console.log('Error, cannot combine objects, meshes are missing!');
         deselectObjects();
-        this.meshes = meshes;
-        this.materials = meshes.map(mesh => mesh.material.clone());
+        this.meshes = meshes.map(mesh => mesh.clone());
+        this.meshes.forEach((mesh, i) => mesh.material = meshes[i].material.clone());
         this.operation = operation;
         this.resultName = resultName;
         this.execute();
     }
     execute() {
-        this.result = booleanOperation(this.operation, this.meshes, this.resultName);
+        this.resultID = booleanOperation(this.operation, this.meshes, this.resultName).uuid;
     }
     undo() {
-        deleteObjects([this.result])
+        deleteObjects([getMesh(this.resultID)]);
         this.meshes.forEach((mesh, i) => {
-            mesh.material = this.materials[i];
             instantiateObject(mesh);
         });
         selectObjects(this.meshes);

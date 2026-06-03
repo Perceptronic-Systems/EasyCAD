@@ -1,7 +1,7 @@
 import { color } from "three/tsl";
 import { scene } from './camera.js';
 import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper, generateCircularPattern, generateRectangularPattern, clearPreviews, applyPreviews } from "./cad_tools.js";
-import { transformControls, activateTransformControls, deactivateTransformControls } from "./transform_controls.js";
+import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';

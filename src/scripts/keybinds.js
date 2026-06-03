@@ -1,6 +1,6 @@
 import { remove } from "three/examples/jsm/libs/tween.module.js";
-import { selectAll, copy, paste, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
-import { undo, redo, undoStack, redoStack, addObject, removeObjects, combineObjects } from './commands.js';
+import { selectAll, copy, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
+import { undo, redo, undoStack, redoStack, paste, addObject, removeObjects, combineObjects } from './commands.js';
 import { unselectTool, setTool, editorControls } from "./editor_controls.js";
 
 const primativesDropdown = document.getElementById('primatives-dropdown');
@@ -88,7 +88,7 @@ document.addEventListener('keydown', (event) => {
     case 'v':
       event.preventDefault();
       if (ctrlDown) {
-        paste();
+        undoStack.push(new paste());
       }
       break;
     case 'd':

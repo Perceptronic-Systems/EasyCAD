@@ -31,8 +31,8 @@ scene.add(zAxis);
 export function createName(name) {
   let i = 0;
   let tempName = name;
-  if (scene.getObjectByName(tempName)) {
-    while (scene.getObjectByName(tempName)) {
+  if (scene.getObjectByName(tempName) || selectionGroup.getObjectByName(tempName)) {
+    while (scene.getObjectByName(tempName) || selectionGroup.getObjectByName(tempName)) {
       i += 1;
       tempName = name + " " + i;
     }
@@ -169,17 +169,19 @@ export function applyPreviews() {
 }
 
 // Copy, paste, and duplicate
-let clipboard = {}
+export let clipboard = {}
 export function copy() {
+  clipboard = {};
   const tempSelection = selectedObjects;
   deselectObjects();
   for (let [objectName, mesh] of Object.entries(tempSelection)) {
     clipboard[objectName] = mesh.clone();
   }
+  Object.values(clipboard).forEach(mesh => mesh.material = mesh.material.clone());
   selectObjects(Object.values(tempSelection))
 }
 
-export function paste() {
+export function pasteClipboard() {
   for (let [objectName, object] of Object.entries(clipboard)) {
     instantiateObject(object, objectName, true);
   }
