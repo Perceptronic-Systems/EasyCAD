@@ -2,6 +2,7 @@ import { scene, camera, renderer, canvas, outlineObject, clearOutlines, cameraCo
 import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup, getSize } from './transform_controls.js'
 import { generateObjectPreview } from './object_previews.js';
 
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import * as THREE from 'three';
 import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh-csg';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
@@ -49,13 +50,112 @@ export function instantiateObject(mesh, name, selectOnFinish=true, keep=false) {
   return mesh;
 }
 
-// Primitive Functionality
+// Materials
 export const default_material = new THREE.MeshStandardMaterial({
   color: 0x374891,
   polygonOffset: true,
   polygonOffsetFactor: 1,
   polygonOffsetUnits: 1
 });
+
+function createSlicerDiagnosticMesh(csgInput) {
+    const diagnosticGroup = new THREE.Group();
+    let cleanGeometry;
+
+    // 1. SAFELY EXTRACT AND NORMALIZE GEOMETRY
+    if (!csgInput) {
+        console.error("Diagnostic tool received null or undefined input.");
+        return diagnosticGroup;
+    }
+
+    // Extract geometry if the raw evaluator output object was passed directly
+    const rawGeo = csgInput.geometry ? csgInput.geometry : csgInput;
+
+    if (rawGeo instanceof THREE.BufferGeometry) {
+        cleanGeometry = rawGeo.clone();
+    } else if (rawGeo.attributes) {
+        // If it looks like a geometry duck, build a formal one
+        cleanGeometry = new THREE.BufferGeometry();
+        Object.keys(rawGeo.attributes).forEach(key => {
+            cleanGeometry.setAttribute(key, rawGeo.attributes[key]);
+        });
+        if (rawGeo.index) cleanGeometry.setIndex(rawGeo.index);
+    } else {
+        console.error("Provided input could not be converted to THREE.BufferGeometry", csgInput);
+        return diagnosticGroup;
+    }
+
+    // 2. WELD AND COMPUTE MISSING METADATA
+    // CSG outputs often lack index structures or normals, which causes the crash
+    if (!cleanGeometry.index) {
+        // If non-indexed, mergeVertices will index it automatically
+        cleanGeometry = BufferGeometryUtils.mergeVertices(cleanGeometry, 1e-4);
+    } else {
+        cleanGeometry = BufferGeometryUtils.mergeVertices(cleanGeometry, 1e-4);
+    }
+    
+    cleanGeometry.computeVertexNormals();
+
+    // 3. CREATE STRICTOR VISUAL MESH (Matches Slicer Performance)
+    const strictMaterial = new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        roughness: 0.4,
+        side: THREE.FrontSide, // Missing faces will show as holes here!
+    });
+    
+    const visualMesh = new THREE.Mesh(cleanGeometry, strictMaterial);
+    diagnosticGroup.add(visualMesh);
+
+    // 4. HIGHLIGHT BOUNDARY HOLES (NON-MANIFOLD EDGES)
+    const index = cleanGeometry.index;
+    const position = cleanGeometry.attributes.position;
+
+    if (index && position) {
+        const edgeMap = new Map();
+        const getEdgeKey = (a, b) => a < b ? `${a}_${b}` : `${b}_${a}`;
+
+        for (let i = 0; i < index.count; i += 3) {
+            const v0 = index.getX(i);
+            const v1 = index.getX(i + 1);
+            const v2 = index.getX(i + 2);
+
+            [getEdgeKey(v0, v1), getEdgeKey(v1, v2), getEdgeKey(v2, v0)].forEach(key => {
+                edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+            });
+        }
+
+        const errorVertices = [];
+        edgeMap.forEach((count, key) => {
+            if (count !== 2) { 
+                const [vA, vB] = key.split('_').map(Number);
+                errorVertices.push(
+                    position.getX(vA), position.getY(vA), position.getZ(vA),
+                    position.getX(vB), position.getY(vB), position.getZ(vB)
+                );
+            }
+        });
+
+        if (errorVertices.length > 0) {
+            const edgeGeo = new THREE.BufferGeometry();
+            edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(errorVertices, 3));
+            
+            const edgeMat = new THREE.LineBasicMaterial({ 
+                color: 0xff0033, 
+                depthTest: false 
+            });
+            
+            const errorLines = new THREE.LineSegments(edgeGeo, edgeMat);
+            errorLines.renderOrder = 999;
+            diagnosticGroup.add(errorLines);
+            
+            console.warn(`Slicer Alert: Found ${errorVertices.length / 6} non-manifold edges!`);
+        }
+    }
+
+    return diagnosticGroup;
+}
+
+// Primitive Functionality
 export function createPrimitive(name, shape, size, position = [0, 0, 0], objectMaterial = default_material, selectOnFinish = true) {
   let material = objectMaterial.clone();
   let mesh = null;
@@ -311,6 +411,8 @@ export function booleanOperation(operation_type, meshes, resultName) {
     secondaryBrush.updateMatrixWorld();
 
     const evaluator = new Evaluator();
+    evaluator.useCentroidPairs = true;
+    evaluator.useCDTClipping = true;
     result = evaluator.evaluate(baseBrush, secondaryBrush, operation);
     deleteObjects([baseMesh, secondaryMesh]);
     result.material = default_material.clone();
@@ -320,6 +422,7 @@ export function booleanOperation(operation_type, meshes, resultName) {
     baseBrush.scale.copy(result.scale);
     baseBrush.updateMatrixWorld();
   }
+  //result = createSlicerDiagnosticMesh(result);
   instantiateObject(result, resultName, true);
   return result;
 }

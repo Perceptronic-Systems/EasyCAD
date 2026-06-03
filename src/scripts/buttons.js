@@ -3,6 +3,8 @@ import { booleanToSelection, selectedObjects, exporter, default_material, applyP
 import { undo, redo, undoStack, redoStack, addPrimitive, removeObjects, combineObjects } from './commands.js';
 import { camera, setCameraType } from './camera.js';
 import { circularPattern, rectangularPattern } from './commands.js';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import * as THREE from 'three';
 
 // Camera type selector
 export const canvas = document.querySelector('#bg');
@@ -116,7 +118,11 @@ rectPatButton.addEventListener("click", () => {
 
 exportButton.addEventListener("click", () => {
   for (const mesh of Object.values(selectedObjects)) {
-    const result = exporter.parse(mesh);
+    const cleanedGeometry = BufferGeometryUtils.mergeVertices(mesh.geometry.clone(), 1e-3);
+    cleanedGeometry.computeVertexNormals();
+    cleanedGeometry.computeTangents();
+    const tempMesh = new THREE.Mesh(cleanedGeometry, mesh.material.clone());
+    const result = exporter.parse(tempMesh);
     const blob = new Blob([result], { type: 'application/octet-stream' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
