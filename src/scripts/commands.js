@@ -115,22 +115,61 @@ export class addObject {
 
 export class removeObjects {
     constructor(meshes) {
-        this.meshes = meshes.map(mesh => mesh.clone());
-        this.meshes.forEach((mesh, i) => mesh.material = meshes[i].material.clone());
+        if (!meshes || meshes.length === 0) return;
+
+        this.backupData = meshes.map(mesh => {
+            const worldPosition = new THREE.Vector3();
+            const worldQuaternion = new THREE.Quaternion();
+            const worldScale = new THREE.Vector3();
+            
+            mesh.getWorldPosition(worldPosition);
+            mesh.getWorldQuaternion(worldQuaternion);
+            mesh.getWorldScale(worldScale);
+
+            return {
+                meshClone: mesh.clone(),
+                geometryClone: mesh.geometry.clone(),
+                materialClone: mesh.material ? mesh.material.clone() : null,
+                position: worldPosition,
+                quaternion: worldQuaternion,
+                scale: worldScale,
+                name: mesh.name
+            };
+        });
+
+        this.liveMeshesToDelete = [...meshes];
         this.execute();
     }
+
     execute() {
-        deleteObjects(this.meshes);
+        deleteObjects(this.liveMeshesToDelete);
     }
+
     undo() {
-        this.meshes.forEach(mesh => {
+        const restoredMeshes = [];
+
+        this.backupData.forEach(b => {
             try {
-                instantiateObject(mesh, mesh.name, true, true);
+                const freshClone = b.meshClone.clone();
+                freshClone.geometry = b.geometryClone.clone();
+                if (b.materialClone) freshClone.material = b.materialClone.clone();
+                
+                freshClone.position.copy(b.position);
+                freshClone.quaternion.copy(b.quaternion);
+                freshClone.scale.copy(b.scale);
+                freshClone.children = []; // Traversal safeguard
+
+                instantiateObject(freshClone, b.name, false, true, true);
+                restoredMeshes.push(freshClone);
             } catch (error) {
-                console.log('An error occured when re-creating the deleted object:');
-                console.log(error);
+                console.error('An error occurred when re-creating the deleted object:', error);
             }
-        })
+        });
+
+        if (restoredMeshes.length > 0) {
+            selectObjects(restoredMeshes);
+        }
+
         redoStack.push(this);
     }
 }
