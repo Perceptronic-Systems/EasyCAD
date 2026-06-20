@@ -3,12 +3,17 @@ import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, se
 import { activateTransformControls, defineSelectionGroup, transformControls } from './transform_controls.js';
 import { generateCircularPattern, generateRectangularPattern, activeTool, clipboard, createName } from './cad_tools.js';
 import { scene } from './camera.js';
+import * as THREE from 'three';
 
 export let undoStack = [];
 export let redoStack = [];
 
 function getMesh(uuid) {
     return scene.getObjectByProperty('uuid', uuid);
+}
+
+function getMeshByName(name) {
+    return scene.getObjectByName(name);
 }
 
 export function undo() {
@@ -66,10 +71,12 @@ export class addPrimitive {
         this.execute();
     }
     execute() {
-        this.meshID = createPrimitive(this.meshName, this.type, this.size, this.position).uuid;
+        this.meshName = createPrimitive(this.meshName, this.type, this.size, this.position).name;
+        console.log(this.meshName)
     }
     undo() {
-        deleteObjects([getMesh(this)]);
+        deselectObjects();
+        deleteObjects([getMeshByName(this.meshName)]);
         redoStack.push(this);
     }
 }
@@ -179,22 +186,74 @@ export class setRotation {
 export class combineObjects {
     constructor(meshes, operation, resultName) {
         if (!meshes) console.log('Error, cannot combine objects, meshes are missing!');
+        this.backupData = meshes.map(mesh => {
+            const worldPosition = new THREE.Vector3();
+            const worldQuaternion = new THREE.Quaternion();
+            const worldScale = new THREE.Vector3();
+            mesh.getWorldPosition(worldPosition);
+            mesh.getWorldQuaternion(worldQuaternion);
+            mesh.getWorldScale(worldScale);
+
+            return {
+                meshClone: mesh.clone(),
+                geometryClone: mesh.geometry.clone(),
+                materialClone: mesh.material ? mesh.material.clone() : null,
+                position: worldPosition,
+                quaternion: worldQuaternion,
+                scale: worldScale
+            };
+        });
+        
+        this.currentLiveMeshes = [...meshes];
         deselectObjects();
-        this.meshes = meshes.map(mesh => mesh.clone());
-        this.meshes.forEach((mesh, i) => mesh.material = meshes[i].material.clone());
         this.operation = operation;
         this.resultName = resultName;
         this.execute();
     }
+
     execute() {
-        this.resultID = booleanOperation(this.operation, this.meshes, this.resultName).uuid;
-    }
-    undo() {
-        deleteObjects([getMesh(this.resultID)]);
-        this.meshes.forEach((mesh, i) => {
-            instantiateObject(mesh);
+        if (this.currentLiveMeshes && this.currentLiveMeshes.length > 0) {
+            deleteObjects(this.currentLiveMeshes);
+            this.currentLiveMeshes = [];
+        }
+
+        const transientClones = this.backupData.map(b => {
+            const tMesh = b.meshClone.clone();
+            tMesh.geometry = b.geometryClone.clone();
+            if (b.materialClone) tMesh.material = b.materialClone.clone();
+
+            tMesh.position.copy(b.position);
+            tMesh.quaternion.copy(b.quaternion);
+            tMesh.scale.copy(b.scale);
+            return tMesh;
         });
-        selectObjects(this.meshes);
+
+        this.resultID = booleanOperation(this.operation, transientClones, this.resultName).uuid;
+    }
+
+    undo() {
+        const resultMesh = getMesh(this.resultID);
+        if (resultMesh) {
+            deleteObjects([resultMesh]);
+        }
+        
+        this.currentLiveMeshes = this.backupData.map(b => {
+            const freshClone = b.meshClone.clone();
+            freshClone.geometry = b.geometryClone.clone();
+            if (b.materialClone) freshClone.material = b.materialClone.clone();
+
+            freshClone.position.copy(b.position);
+            freshClone.quaternion.copy(b.quaternion);
+            freshClone.scale.copy(b.scale);
+            return freshClone;
+        });
+
+        this.currentLiveMeshes.forEach((mesh) => {
+            mesh.children = [];
+            instantiateObject(mesh, mesh.name, false, true, true); 
+        });
+        
+        selectObjects(this.currentLiveMeshes);
         redoStack.push(this);
     }
 }

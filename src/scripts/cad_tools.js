@@ -41,10 +41,12 @@ export function createName(name) {
   return tempName;
 }
 export const objects = new Set([]);
-export function instantiateObject(mesh, name, selectOnFinish=true, keep=false) {
+export function instantiateObject(mesh, name, selectOnFinish=true, keep=false, forceName=false) {
   if (!name) name = mesh.name;
   scene.attach(mesh);
-  mesh.name = createName(name);
+  
+  mesh.name = forceName ? name : createName(name);
+  
   objects.add(mesh.name);
   if (selectOnFinish) selectObjects([mesh], keep);
   return mesh;
@@ -392,8 +394,8 @@ export function booleanToSelection(operation_type, resultName) {
 }
 
 export function booleanOperation(operation_type, meshes, resultName) {
-  const operation = operations[operation_type];
   deselectObjects();
+  const operation = operations[operation_type];
   const baseMesh = meshes[0]
   let baseBrush = new Brush(baseMesh.geometry, baseMesh.material);
   baseBrush.position.copy(baseMesh.position);
