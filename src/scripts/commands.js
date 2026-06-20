@@ -302,6 +302,7 @@ export class circularPattern {
         deselectObjects();
         this.mesh = mesh.clone();
         this.material = mesh.material.clone();
+        this.originalName = mesh.name;
         this.axis = axis;
         this.radius = radius;
         this.n = n;
@@ -316,7 +317,7 @@ export class circularPattern {
         deleteObjects(this.result);
         this.mesh.material = this.material;
         this.mesh.visible = true;
-        instantiateObject(this.mesh);
+        instantiateObject(this.mesh, this.originalName, true, true, true);
         selectObjects([this.mesh]);
         redoStack.push(this);
     }
@@ -327,6 +328,7 @@ export class rectangularPattern {
         deselectObjects();
         this.mesh = mesh.clone();
         this.material = mesh.material.clone();
+        this.originalName = mesh.name;
         this.plane = plane;
         this.width = width;
         this.countA = countA;
@@ -349,7 +351,7 @@ export class rectangularPattern {
         deleteObjects(this.result);
         this.mesh.material = this.material;
         this.mesh.visible = true;
-        instantiateObject(this.mesh);
+        instantiateObject(this.mesh, this.originalName, true, true, true);
         selectObjects([this.mesh]);
         redoStack.push(this);
     }

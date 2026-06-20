@@ -506,7 +506,7 @@ export function generateRectangularPattern(mesh, plane, width, countA, length, c
       } else {
         clone.material = clone.material.clone();
         clone.visible = true;
-        instantiateObject(clone);
+        instantiateObject(clone, mesh.name);
       }
       meshes.push(clone);
     }
