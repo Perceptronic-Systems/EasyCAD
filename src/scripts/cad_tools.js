@@ -433,17 +433,16 @@ export function booleanOperation(operation_type, meshes, resultName) {
 
 export function generateCircularPattern(mesh, axis, radius, n, preview) {
   if (preview) clearPreviews();
+  mesh.updateMatrixWorld(true);
   const center = new THREE.Vector3();
   mesh.getWorldPosition(center);
   const axes = ['x', 'y', 'z'].filter(a => a !== axis);
   let meshes = [];
   for (let i = 0; i < n; i++) {
-    let clone;
-    if (preview) {
-      clone = generateObjectPreview(mesh);
-    } else {
-      clone = mesh.clone();
-    }
+    let clone = preview ? generateObjectPreview(mesh) : mesh.clone();
+    clone.scale.copy(selectionGroup.scale);
+    clone.rotation.copy(selectionGroup.rotation);
+
     let position = new THREE.Vector3();
     const angle = (i / n) * Math.PI * 2;
     position[axes[0]] = center[axes[0]] + Math.cos(angle) * radius;
@@ -451,27 +450,30 @@ export function generateCircularPattern(mesh, axis, radius, n, preview) {
     position[axis] = center[axis];
     clone.position.copy(position);
 
-    if (axis === 'y') clone.rotation[axis] = clone.rotation[axis] + (Math.PI) - angle;
-    if (axis === 'x' || axis === 'z') clone.rotation[axis] = clone.rotation[axis] + angle;
+    const rotationAxis = new THREE.Vector3();
+    rotationAxis[axis] = 1; 
+    const patternRotation = new THREE.Quaternion().setFromAxisAngle(rotationAxis, -angle);
+    clone.quaternion.premultiply(patternRotation);
 
     clone.name = createName(mesh.name);
     clone.visible = true;
     if (preview) {
       clone.userData.tag = 'preview';
-      scene.add(clone);
+      scene.attach(clone);
     } else {
       clone.material = clone.material.clone();
-      instantiateObject(clone);
+      instantiateObject(clone, clone.name, false);
     }
     meshes.push(clone);
   }
   if (!preview) {
+    deselectObjects();
     deleteObjects([mesh]);
     selectObjects(meshes);
   } else {
     mesh.visible = false;
   }
-  return meshes
+  return meshes;
 }
 
 export function generateRectangularPattern(mesh, plane, width, countA, length, countB, preview) {
@@ -497,7 +499,11 @@ export function generateRectangularPattern(mesh, plane, width, countA, length, c
 
       clone.position.copy(newPosition);
       clone.rotation.copy(mesh.rotation);
-      clone.scale.copy(selectionGroup.scale);
+      if (preview) {
+        clone.scale.copy(selectionGroup.scale);
+      } else {
+        clone.scale.copy(mesh.scale);
+      }
 
       clone.name = createName(mesh.name);
       clone.visible = true;
@@ -507,12 +513,13 @@ export function generateRectangularPattern(mesh, plane, width, countA, length, c
       } else {
         clone.material = clone.material.clone();
         clone.visible = true;
-        instantiateObject(clone, mesh.name);
+        instantiateObject(clone, mesh.name, false);
       }
       meshes.push(clone);
     }
   }
   if (!preview) {
+    deselectObjects();
     deleteObjects([mesh]);
     selectObjects(meshes);
   } else {
