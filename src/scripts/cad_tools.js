@@ -477,6 +477,7 @@ export function generateCircularPattern(mesh, axis, radius, n, preview) {
 export function generateRectangularPattern(mesh, plane, width, countA, length, countB, preview) {
   if (preview) clearPreviews();
   const axes = plane.toLowerCase().split('');
+  mesh.updateMatrixWorld(true);
   const size = getSize(mesh);
   const stepA = countA > 1 && width > size[axes[0]] ? (width - size[axes[0]]) / (countA - 1) : 0;
   const stepB = countB > 1 && length > size[axes[1]] ? (length - size[axes[1]]) / (countB - 1) : 0;
@@ -493,11 +494,11 @@ export function generateRectangularPattern(mesh, plane, width, countA, length, c
       mesh.getWorldPosition(newPosition);
       newPosition[axes[0]] += stepA * i_a;
       newPosition[axes[1]] += stepB * i_b;
-      clone.position.copy(newPosition);
-      clone.position.copy(newPosition);
 
+      clone.position.copy(newPosition);
       clone.rotation.copy(mesh.rotation);
-      clone.scale.copy(mesh.scale);
+      clone.scale.copy(selectionGroup.scale);
+
       clone.name = createName(mesh.name);
       clone.visible = true;
       if (preview) {
