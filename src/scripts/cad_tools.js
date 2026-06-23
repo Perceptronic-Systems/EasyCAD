@@ -171,6 +171,27 @@ export function createPrimitive(name, shape, size, position = [0, 0, 0], objectM
     mesh = new THREE.Mesh(new THREE.ConeGeometry(size[0], size[1], size[2]), material);
   } else if (shape == "torus" && size.length === 4) {
     mesh = new THREE.Mesh(new THREE.TorusGeometry(size[0], size[1], size[2], size[3]), material);
+  } else if (shape == "wedge" && size.length === 3) {
+    const [w, h, d] = [size[0] / 2, size[1], size[2] / 2];
+    const vertices = new Float32Array([
+      // Bottom (2 tris)
+      -w, 0, -d,   w, 0, -d,  -w, 0,  d,
+       w, 0, -d,   w, 0,  d,  -w, 0,  d,
+      // Slope (2 tris)
+       w, h, -d,  -w, h, -d,  -w, 0,  d,
+       w, 0,  d,   w, h, -d,  -w, 0,  d,
+      // Back wall (2 tris)
+      -w, h, -d,   w, h, -d,  -w, 0, -d,
+       w, h, -d,   w, 0, -d,  -w, 0, -d,
+      // Left cap (1 tri)
+      -w, h, -d,  -w, 0, -d,  -w, 0,  d,
+      // Right cap (1 tri)
+       w, 0, -d,   w, h, -d,   w, 0,  d,
+    ]);
+    const wedgeGeo = new THREE.BufferGeometry();
+    wedgeGeo.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+    wedgeGeo.computeVertexNormals();
+    mesh = new THREE.Mesh(wedgeGeo, material);
   } else {
     return null;
   }

@@ -160,6 +160,11 @@ torusButton.addEventListener("click", () => {
   undoStack.push(new addPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0]));
 });
 
+export const wedgeButton = document.querySelector("#wedge");
+wedgeButton.addEventListener("click", () => {
+  undoStack.push(new addPrimitive("Wedge", "wedge", [20, 20, 20]));
+});
+
 document.addEventListener('click', function (event) {
   if (event.target) {
     switch (event.target.id) {
