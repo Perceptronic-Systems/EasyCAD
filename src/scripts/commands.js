@@ -299,7 +299,6 @@ export class combineObjects {
 
 export class circularPattern {
     constructor(mesh, axis, radius, n) {
-        deselectObjects();
         this.mesh = mesh.clone();
         this.material = mesh.material.clone();
         this.originalName = mesh.name;
@@ -325,7 +324,6 @@ export class circularPattern {
 
 export class rectangularPattern {
     constructor(mesh, plane, width, countA, length, countB) {
-        deselectObjects();
         this.mesh = mesh.clone();
         this.material = mesh.material.clone();
         this.originalName = mesh.name;
