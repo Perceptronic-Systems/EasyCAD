@@ -457,6 +457,7 @@ export function generateCircularPattern(mesh, axis, radius, n, preview) {
   mesh.updateMatrixWorld(true);
   const center = new THREE.Vector3();
   mesh.getWorldPosition(center);
+  console.log(center);
   const axes = ['x', 'y', 'z'].filter(a => a !== axis);
   let meshes = [];
   for (let i = 0; i < n; i++) {

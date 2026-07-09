@@ -52,13 +52,13 @@ transformControls.addEventListener('mouseUp', (e) => {
     activateTransformControls(selectionGroup, selectedObjects, mode);
     mouseDown = false;
     const userData = transformControls.object.userData;
-    if (!userData.oldPos) return;
+    if (!userData.oldPos && !userData.oldScale && !userData.oldRot) return;
     if (transformControls.mode === 'translate') {
-        undoStack.push(new setPosition(transformControls.object, userData.oldPos, transformControls.object.position.clone()));
+        undoStack.push(new setPosition(selectionGroup, userData.oldPos, selectionGroup.position.clone()));
     } else if (transformControls.mode === 'scale') {
-        undoStack.push(new setScale(transformControls.object, userData.oldScale, transformControls.object.scale.clone()));
+        undoStack.push(new setScale(selectionGroup, userData.oldScale, selectionGroup.scale.clone()));
     } else if (transformControls.mode === 'rotate') {
-        undoStack.push(new setRotation(transformControls.object, userData.oldRot, transformControls.object.rotation.clone()));
+        undoStack.push(new setRotation(selectionGroup, userData.oldRot, selectionGroup.rotation.clone()));
     }
 });
 
@@ -68,15 +68,27 @@ export class addPrimitive {
         this.type = type;
         this.size = size;
         this.position = position;
+        this.mesh = null;
+        this.savedUuid = null;
         this.execute();
     }
+
     execute() {
-        this.meshName = createPrimitive(this.meshName, this.type, this.size, this.position).name;
-        console.log(this.meshName)
+        if (!this.mesh) {
+            this.mesh = createPrimitive(this.meshName, this.type, this.size, this.position);
+            this.meshName = this.mesh.name;
+            this.savedUuid = this.mesh.uuid;
+        } else {
+            const reconstructedMesh = createPrimitive(this.meshName, this.type, this.size, this.position);
+            reconstructedMesh.uuid = this.savedUuid;
+            this.mesh = reconstructedMesh;
+            instantiateObject(this.mesh, this.meshName, true, false, true);
+        }
     }
+
     undo() {
         deselectObjects();
-        deleteObjects([getMeshByName(this.meshName)]);
+        deleteObjects([this.mesh]);
         redoStack.push(this);
     }
 }
@@ -91,23 +103,28 @@ export class paste {
         this.clipboard.forEach(mesh => instantiateObject(mesh, createName(mesh.name)));
     }
     undo() {
-        deleteObjects([this.clipboard]);
+        deleteObjects(this.clipboard);
         redoStack.push(this);
     }
 }
 
 export class addObject {
-    constructor(mesh, meshName, execute=true) {
+    constructor(mesh, meshName, execute = true, uuid = null) {
         this.mesh = mesh.clone();
         this.mesh.material = mesh.material.clone();
         this.mesh.name = meshName;
         this.meshName = meshName;
+        if (uuid) this.mesh.uuid = uuid;
+
         if (execute) this.execute();
     }
+
     execute() {
         instantiateObject(this.mesh, this.meshName);
     }
+
     undo() {
+        this.savedUuid = this.mesh.uuid;
         deleteObjects([this.mesh]);
         redoStack.push(this);
     }
@@ -121,12 +138,13 @@ export class removeObjects {
             const worldPosition = new THREE.Vector3();
             const worldQuaternion = new THREE.Quaternion();
             const worldScale = new THREE.Vector3();
-            
+
             mesh.getWorldPosition(worldPosition);
             mesh.getWorldQuaternion(worldQuaternion);
             mesh.getWorldScale(worldScale);
 
             return {
+                uuid: mesh.uuid, // capture true identity before any clone()
                 meshClone: mesh.clone(),
                 geometryClone: mesh.geometry.clone(),
                 materialClone: mesh.material ? mesh.material.clone() : null,
@@ -137,12 +155,14 @@ export class removeObjects {
             };
         });
 
-        this.liveMeshesToDelete = [...meshes];
+        this.currentLiveMeshes = [...meshes]; // track the CURRENT live reference
         this.execute();
     }
 
     execute() {
-        deleteObjects(this.liveMeshesToDelete);
+        if (this.currentLiveMeshes && this.currentLiveMeshes.length > 0) {
+            deleteObjects(this.currentLiveMeshes);
+        }
     }
 
     undo() {
@@ -151,13 +171,14 @@ export class removeObjects {
         this.backupData.forEach(b => {
             try {
                 const freshClone = b.meshClone.clone();
+                freshClone.uuid = b.uuid; // force original identity back
                 freshClone.geometry = b.geometryClone.clone();
                 if (b.materialClone) freshClone.material = b.materialClone.clone();
-                
+
                 freshClone.position.copy(b.position);
                 freshClone.quaternion.copy(b.quaternion);
                 freshClone.scale.copy(b.scale);
-                freshClone.children = []; // Traversal safeguard
+                freshClone.children = [];
 
                 instantiateObject(freshClone, b.name, false, true, true);
                 restoredMeshes.push(freshClone);
@@ -166,58 +187,65 @@ export class removeObjects {
             }
         });
 
-        if (restoredMeshes.length > 0) {
-            selectObjects(restoredMeshes);
-        }
-
+        this.currentLiveMeshes = restoredMeshes; // keep execute()/redo() in sync
+        if (restoredMeshes.length > 0) selectObjects(restoredMeshes);
         redoStack.push(this);
     }
 }
 
 export class setPosition {
-    constructor(mesh, oldPos, newPos) {
-        this.meshID = mesh.uuid;
-        this.newPos = newPos;
+    constructor(group, oldPos, newPos) {
+        this.group = group;
+        this.meshIDs = this.group.children.map(mesh => mesh.uuid);
         this.oldPos = oldPos;
+        this.newPos = newPos;
         this.execute();
     }
     execute() {
-        getMesh(this.meshID).position.copy(this.newPos);
+        selectObjects(this.meshIDs.map(id => getMesh(id)));
+        this.group.position.copy(this.newPos);
     }
     undo() {
-        getMesh(this.meshID).position.copy(this.oldPos);
+        selectObjects(this.meshIDs.map(id => getMesh(id)));
+        this.group.position.copy(this.oldPos);
         redoStack.push(this);
     }
 }
 
 export class setScale {
-    constructor(mesh, oldScale, newScale) {
-        this.meshID = mesh.uuid;
+    constructor(group, oldScale, newScale) {
+        this.group = group;
+        this.meshIDs = this.group.children.map(mesh => mesh.uuid);
         this.oldScale = oldScale;
         this.newScale = newScale;
         this.execute();
     }
     execute() {
-        getMesh(this.meshID).scale.copy(this.newScale);
+        selectObjects(this.meshIDs.map(id => getMesh(id)));
+        this.group.scale.copy(this.newScale);
     }
     undo() {
-        getMesh(this.meshID).scale.copy(this.oldScale);
+        selectObjects(this.meshIDs.map(id => getMesh(id)));
+        this.group.scale.copy(this.oldScale);
         redoStack.push(this);
     }
 }
 
 export class setRotation {
-    constructor(mesh, oldRot, newRot) {
-        this.meshID = mesh.uuid;
+    constructor(group, oldRot, newRot) {
+        this.group = group;
+        this.meshIDs = this.group.children.map(mesh => mesh.uuid);
         this.oldRot = oldRot;
         this.newRot = newRot;
         this.execute();
     }
     execute() {
-        getMesh(this.meshID).rotation.copy(this.newRot);
+        selectObjects(this.meshIDs.map(id => getMesh(id)));
+        this.group.rotation.copy(this.newRot);
     }
     undo() {
-        getMesh(this.meshID).rotation.copy(this.oldRot);
+        selectObjects(this.meshIDs.map(id => getMesh(id)));
+        this.group.rotation.copy(this.oldRot);
         redoStack.push(this);
     }
 }
@@ -234,6 +262,7 @@ export class combineObjects {
             mesh.getWorldScale(worldScale);
 
             return {
+                uuid: mesh.uuid,
                 meshClone: mesh.clone(),
                 geometryClone: mesh.geometry.clone(),
                 materialClone: mesh.material ? mesh.material.clone() : null,
@@ -275,9 +304,10 @@ export class combineObjects {
         if (resultMesh) {
             deleteObjects([resultMesh]);
         }
-        
+
         this.currentLiveMeshes = this.backupData.map(b => {
             const freshClone = b.meshClone.clone();
+            freshClone.uuid = b.uuid; // <-- force the original identity back, every time
             freshClone.geometry = b.geometryClone.clone();
             if (b.materialClone) freshClone.material = b.materialClone.clone();
 
@@ -289,9 +319,9 @@ export class combineObjects {
 
         this.currentLiveMeshes.forEach((mesh) => {
             mesh.children = [];
-            instantiateObject(mesh, mesh.name, false, true, true); 
+            instantiateObject(mesh, mesh.name, false, true, true);
         });
-        
+
         selectObjects(this.currentLiveMeshes);
         redoStack.push(this);
     }
@@ -300,6 +330,16 @@ export class combineObjects {
 export class circularPattern {
     constructor(mesh, axis, radius, n) {
         this.mesh = mesh.clone();
+        mesh.updateWorldMatrix(true, false);
+        const originPos = new THREE.Vector3();
+        mesh.getWorldPosition(originPos);
+        const worldMatrix = new THREE.Matrix4();
+        worldMatrix.copy(mesh.matrixWorld);
+        const originScale = new THREE.Vector3();
+        mesh.getWorldScale(originScale);
+        this.mesh.position.copy(originPos);
+        this.mesh.scale.copy(originScale);
+        this.mesh.quaternion.setFromRotationMatrix(worldMatrix); 
         this.material = mesh.material.clone();
         this.originalName = mesh.name;
         this.axis = axis;
@@ -325,6 +365,16 @@ export class circularPattern {
 export class rectangularPattern {
     constructor(mesh, plane, width, countA, length, countB) {
         this.mesh = mesh.clone();
+        mesh.updateWorldMatrix(true, false);
+        const originPos = new THREE.Vector3();
+        mesh.getWorldPosition(originPos);
+        const worldMatrix = new THREE.Matrix4();
+        worldMatrix.copy(mesh.matrixWorld);
+        const originScale = new THREE.Vector3();
+        mesh.getWorldScale(originScale);
+        this.mesh.position.copy(originPos);
+        this.mesh.scale.copy(originScale);
+        this.mesh.quaternion.setFromRotationMatrix(worldMatrix);
         this.material = mesh.material.clone();
         this.originalName = mesh.name;
         this.plane = plane;
