@@ -17,6 +17,14 @@ function getMeshByName(name) {
     return scene.getObjectByName(name);
 }
 
+export function clearRedoStack() {
+    redoStack.length = 0;
+    // Keep UI buttons synchronized
+    if (typeof window !== 'undefined' && window.updateUndoRedoButtons) {
+        window.updateUndoRedoButtons();
+    }
+}
+
 export function undo() {
     if (undoStack.length === 0) return;
     const command = undoStack.pop();
@@ -61,6 +69,7 @@ transformControls.addEventListener('mouseUp', (e) => {
     } else if (transformControls.mode === 'rotate') {
         undoStack.push(new setRotation(selectionGroup, userData.oldRot, selectionGroup.rotation.clone()));
     }
+    clearRedoStack();
 });
 
 export class addPrimitive {
@@ -71,6 +80,7 @@ export class addPrimitive {
         this.position = position;
         this.mesh = null;
         this.savedUuid = null;
+        clearRedoStack();
         this.execute();
     }
 
@@ -98,6 +108,7 @@ export class paste {
     constructor() {
         this.clipboard = Object.values(clipboard).map(mesh => mesh.clone());
         this.clipboard.forEach(mesh => mesh.material = mesh.material.clone());
+        clearRedoStack();
         this.execute();
     }
     execute() {
@@ -117,6 +128,7 @@ export class addObject {
         this.meshName = meshName;
         if (uuid) this.mesh.uuid = uuid;
 
+        clearRedoStack();
         if (execute) this.execute();
     }
 
@@ -145,7 +157,7 @@ export class removeObjects {
             mesh.getWorldScale(worldScale);
 
             return {
-                uuid: mesh.uuid, // capture true identity before any clone()
+                uuid: mesh.uuid,
                 meshClone: mesh.clone(),
                 geometryClone: mesh.geometry.clone(),
                 materialClone: mesh.material ? mesh.material.clone() : null,
@@ -156,7 +168,8 @@ export class removeObjects {
             };
         });
 
-        this.currentLiveMeshes = [...meshes]; // track the CURRENT live reference
+        this.currentLiveMeshes = [...meshes];
+        clearRedoStack();
         this.execute();
     }
 
@@ -172,7 +185,7 @@ export class removeObjects {
         this.backupData.forEach(b => {
             try {
                 const freshClone = b.meshClone.clone();
-                freshClone.uuid = b.uuid; // force original identity back
+                freshClone.uuid = b.uuid;
                 freshClone.geometry = b.geometryClone.clone();
                 if (b.materialClone) freshClone.material = b.materialClone.clone();
 
@@ -188,7 +201,7 @@ export class removeObjects {
             }
         });
 
-        this.currentLiveMeshes = restoredMeshes; // keep execute()/redo() in sync
+        this.currentLiveMeshes = restoredMeshes;
         if (restoredMeshes.length > 0) selectObjects(restoredMeshes);
         redoStack.push(this);
     }
@@ -200,6 +213,7 @@ export class setPosition {
         this.meshIDs = this.group.children.map(mesh => mesh.uuid);
         this.oldPos = oldPos;
         this.newPos = newPos;
+        clearRedoStack();
         this.execute();
     }
     execute() {
@@ -219,6 +233,7 @@ export class setScale {
         this.meshIDs = this.group.children.map(mesh => mesh.uuid);
         this.oldScale = oldScale;
         this.newScale = newScale;
+        clearRedoStack();
         this.execute();
     }
     execute() {
@@ -238,6 +253,7 @@ export class setRotation {
         this.meshIDs = this.group.children.map(mesh => mesh.uuid);
         this.oldRot = oldRot;
         this.newRot = newRot;
+        clearRedoStack();
         this.execute();
     }
     execute() {
@@ -277,6 +293,7 @@ export class combineObjects {
         deselectObjects();
         this.operation = operation;
         this.resultName = resultName;
+        clearRedoStack();
         this.execute();
     }
 
@@ -308,7 +325,7 @@ export class combineObjects {
 
         this.currentLiveMeshes = this.backupData.map(b => {
             const freshClone = b.meshClone.clone();
-            freshClone.uuid = b.uuid; // <-- force the original identity back, every time
+            freshClone.uuid = b.uuid;
             freshClone.geometry = b.geometryClone.clone();
             if (b.materialClone) freshClone.material = b.materialClone.clone();
 
@@ -346,6 +363,7 @@ export class circularPattern {
         this.axis = axis;
         this.radius = radius;
         this.n = n;
+        clearRedoStack();
         this.execute();
     }
 
@@ -383,6 +401,7 @@ export class rectangularPattern {
         this.countA = countA;
         this.length = length;
         this.countB = countB;
+        clearRedoStack();
         this.execute();
     }
 
@@ -413,18 +432,41 @@ export class createSketchCommand {
     this.planeName = sketchData.planeName;
     this.name = name;
     this.mesh = null;
+    this.savedUuid = null;
+    clearRedoStack();
     this.execute();
   }
 
   execute() {
-    this.mesh = buildSketchLine(this.points2D, this.basis, this.planeName);
-    if (this.savedUuid) this.mesh.uuid = this.savedUuid;
+    // 1. Build line geometry mesh
+    const rawMesh = buildSketchLine(this.points2D, this.basis, this.name);
+    
+    // 2. Preserve or save the UUID across undo/redo cycles
+    if (this.savedUuid) {
+      rawMesh.uuid = this.savedUuid;
+    } else {
+      this.savedUuid = rawMesh.uuid;
+    }
+
+    // 3. Register the object properly in scene & internal CAD tracking structures
+    this.mesh = instantiateObject(rawMesh, this.name, true, false, true);
+
+    deselectObjects();
+    selectObjects([this.mesh]);
   }
 
   undo() {
-    this.savedUuid = this.mesh.uuid;
     deselectObjects();
-    deleteObjects([this.mesh]);
+    
+    // Find the live object in the scene via saved UUID or reference
+    const liveMesh = getMesh(this.savedUuid) || this.mesh;
+    
+    if (liveMesh) {
+      // Safely delete from scene and internal tracking
+      deleteObjects([liveMesh]);
+    }
+    
+    this.mesh = null;
     redoStack.push(this);
   }
 }
@@ -442,26 +484,43 @@ export class extrudeSketchCommand {
     this.sketchName = sketchMesh.name;
 
     this.extrudedMesh = null;
+    this.savedExtrudeUuid = null;
+    clearRedoStack();
     this.execute();
   }
 
   execute() {
-    const liveSketch = scene.getObjectByProperty('uuid', this.sketchUuid);
-    if (liveSketch) deleteObjects([liveSketch]);
+    // 1. Find live sketch and remove it
+    const liveSketch = getMesh(this.sketchUuid) || this.sketchMesh;
+    if (liveSketch) {
+      deleteObjects([liveSketch]);
+    }
 
+    // 2. Extrude new 3D mesh
     const rawMesh = extrudeSketchMesh(this.points2D, this.basis, this.depth, this.symmetric);
-    if (this.savedExtrudeUuid) rawMesh.uuid = this.savedExtrudeUuid;
+    if (this.savedExtrudeUuid) {
+      rawMesh.uuid = this.savedExtrudeUuid;
+    }
 
+    deselectObjects();
     this.extrudedMesh = instantiateObject(rawMesh, this.resultName, true);
+    this.savedExtrudeUuid = this.extrudedMesh.uuid;
+    selectObjects([this.extrudedMesh]);
   }
 
   undo() {
-    this.savedExtrudeUuid = this.extrudedMesh.uuid;
     deselectObjects();
-    deleteObjects([this.extrudedMesh]);
 
+    // 1. Delete extruded 3D model
+    const liveExtrude = getMesh(this.savedExtrudeUuid) || this.extrudedMesh;
+    if (liveExtrude) {
+      deleteObjects([liveExtrude]);
+    }
+
+    // 2. Re-create 2D sketch with restored UUID
     const restoredSketch = buildSketchLine(this.points2D, this.basis, this.sketchName);
     restoredSketch.uuid = this.sketchUuid;
+    selectObjects([restoredSketch]);
 
     redoStack.push(this);
   }

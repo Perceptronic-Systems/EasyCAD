@@ -2,6 +2,8 @@ import { remove } from "three/examples/jsm/libs/tween.module.js";
 import { selectAll, copy, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
 import { undo, redo, undoStack, redoStack, paste, addObject, removeObjects, combineObjects } from './commands.js';
 import { unselectTool, setTool, editorControls } from "./editor_controls.js";
+import { isSketchActive, undoLastPoint } from './sketch_tools.js';
+import { updateUndoRedoButtons } from './buttons.js';
 
 const primativesDropdown = document.getElementById('primatives-dropdown');
 
@@ -36,9 +38,15 @@ document.addEventListener('keydown', (event) => {
         if (isSketchActive()) {
           undoLastPoint(); // Step back one point in active sketch session
         } else if (shiftDown) {
-          if (redoStack.length > 0) redo();
+          if (redoStack.length > 0) {
+            redo();
+            updateUndoRedoButtons();
+          }
         } else {
-          if (undoStack.length > 0) undo();
+          if (undoStack.length > 0) {
+            undo();
+            updateUndoRedoButtons();
+          }
         }
       }
       break;

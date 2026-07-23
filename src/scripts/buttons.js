@@ -6,14 +6,12 @@ import {
   selectedObjects, 
   deselectObjects, 
   selectObjects, 
-  createPrimitive, 
   removeSelected, 
   copy, 
   pasteClipboard, 
   selectAll, 
   booleanToSelection,
   exporter,
-  instantiateObject,
   clearPreviews,
   activeTool
 } from './cad_tools.js';
@@ -29,8 +27,7 @@ import {
   finishSketch, 
   cancelSketch, 
   undoLastPoint, 
-  buildSketchLine, 
-  extrudeSketchMesh 
+  isSketchActive
 } from './sketch_tools.js';
 
 import { 
@@ -42,56 +39,23 @@ import {
   combineObjects, 
   circularPattern, 
   rectangularPattern,
-  extrudeSketchCommand 
+  extrudeSketchCommand,
+  createSketchCommand
 } from './commands.js';
 
 // ==========================================
-// 1. CAMERA & TOOLBAR UI SETUP
+// 1. CAMERA SELECTOR SETUP
 // ==========================================
 
 export const canvas = document.querySelector('#bg');
 export const camSelector = document.querySelector('#cam-switch');
 let cameraOrtho = true;
 
-if (camSelector) {
-  camSelector.addEventListener('click', () => {
-    cameraOrtho = !cameraOrtho;
-    camSelector.textContent = cameraOrtho ? 'Orthographic' : 'Perspective';
-    setCameraType(cameraOrtho);
-  });
-}
+// ==========================================
+// 2. EXPORTED BUTTON REFERENCES
+// ==========================================
 
-// Primitives Dropdown Handling
 export const primativesButton = document.querySelector('#primatives-button');
-const primativesDropdown = document.getElementById('primatives-dropdown');
-
-if (primativesButton && primativesDropdown) {
-  primativesButton.addEventListener('click', (event) => {
-    event.stopPropagation(); 
-    const isVisible = primativesDropdown.style.visibility === 'visible';
-    primativesDropdown.style.visibility = isVisible ? 'hidden' : 'visible';
-    primativesDropdown.style.opacity = isVisible ? 0 : 1;
-    
-    if (!isVisible) {
-      const firstChild = primativesDropdown.querySelectorAll('button, input')[0];
-      if (firstChild) firstChild.focus();
-    }
-  });
-
-  document.addEventListener('click', (event) => {
-    if (!primativesButton.contains(event.target) && !primativesDropdown.contains(event.target)) {
-      primativesDropdown.style.visibility = 'hidden';
-      primativesDropdown.style.opacity = 0;
-    }
-  });
-
-  primativesDropdown.addEventListener('click', () => {
-    primativesDropdown.style.visibility = 'hidden';
-    primativesDropdown.style.opacity = 0;
-  });
-}
-
-// Export references for external tool imports
 export const moveButton = document.querySelector("#move");
 export const scaleButton = document.querySelector("#scale");
 export const rotateButton = document.querySelector("#rotate");
@@ -106,24 +70,64 @@ export const circPatButton = document.getElementById('circular');
 export const rectPatButton = document.getElementById('rectangular');
 
 // ==========================================
-// 2. GLOBAL DELEGATED CLICK LISTENER
+// 3. SINGLE GLOBAL DELEGATED CLICK LISTENER
 // ==========================================
 
 document.addEventListener('click', (event) => {
   const target = event.target;
   if (!target) return;
 
-  const id = target.id;
+  const dropdownMenu = document.getElementById('primatives-dropdown');
+
+  // --- Handle Dropdown Toggle & Outside Clicks ---
+  const primativesBtn = target.closest('#primatives-button');
+  if (primativesBtn) {
+    if (dropdownMenu) {
+      const isVisible = dropdownMenu.style.visibility === 'visible';
+      dropdownMenu.style.visibility = isVisible ? 'hidden' : 'visible';
+      dropdownMenu.style.opacity = isVisible ? '0' : '1';
+    }
+    return;
+  }
+
+  // Close dropdown if clicked outside of the dropdown container
+  if (dropdownMenu && !target.closest('#primatives') && !target.closest('.dropdown')) {
+    dropdownMenu.style.visibility = 'hidden';
+    dropdownMenu.style.opacity = '0';
+  }
+
+  // --- Locate Clicked Action Element ---
+  const actionElement = target.closest('button, .primitive, .tool, .modifier, .pattern, [id]');
+  if (!actionElement || !actionElement.id) return;
+
+  const id = actionElement.id;
+
+  // Auto-close dropdown if an actual shape item inside it was picked
+  if (actionElement.classList.contains('primitive') && dropdownMenu) {
+    dropdownMenu.style.visibility = 'hidden';
+    dropdownMenu.style.opacity = '0';
+  }
 
   switch (id) {
+    // --- Camera Toggle ---
+    case 'cam-switch':
+      cameraOrtho = !cameraOrtho;
+      if (camSelector) camSelector.textContent = cameraOrtho ? 'Orthographic' : 'Perspective';
+      setCameraType(cameraOrtho);
+      break;
+
     // --- Undo / Redo ---
     case 'undo-button':
-      undo();
-      updateUndoRedoButtons();
+      if (undoStack.length > 0) {
+        undo();
+        updateUndoRedoButtons();
+      }
       break;
     case 'redo-button':
-      redo();
-      updateUndoRedoButtons();
+      if (redoStack.length > 0) {
+        redo();
+        updateUndoRedoButtons();
+      }
       break;
 
     // --- Editor Tools ---
@@ -176,37 +180,45 @@ document.addEventListener('click', (event) => {
     case 'cube':
     case 'add-cube':
       undoStack.push(new addPrimitive("Cube", "cube", [20, 20, 20], [0, 10, 0]));
+      updateUndoRedoButtons();
       break;
     case 'sphere':
     case 'add-sphere':
       undoStack.push(new addPrimitive("Sphere", "sphere", [10, 8], [0, 10, 0]));
+      updateUndoRedoButtons();
       break;
     case 'cylinder':
     case 'add-cylinder':
       undoStack.push(new addPrimitive("Cylinder", "cylinder", [10, 10, 32], [0, 10, 0]));
+      updateUndoRedoButtons();
       break;
     case 'cone':
     case 'add-cone':
       undoStack.push(new addPrimitive("Cone", "cone", [10, 20, 32], [0, 10, 0]));
+      updateUndoRedoButtons();
       break;
     case 'torus':
     case 'add-torus':
       undoStack.push(new addPrimitive("Torus", "torus", [10, 4, 16, 100], [0, 10, 0]));
+      updateUndoRedoButtons();
       break;
     case 'wedge':
     case 'add-wedge':
       undoStack.push(new addPrimitive("Wedge", "wedge", [20, 20, 20]));
+      updateUndoRedoButtons();
       break;
 
-    // --- Scene Selection & Editing Actions ---
+    // --- Scene Actions ---
     case 'delete-button':
       removeSelected();
+      updateUndoRedoButtons();
       break;
     case 'copy-button':
       copy();
       break;
     case 'paste-button':
       pasteClipboard();
+      updateUndoRedoButtons();
       break;
     case 'select-all-button':
       selectAll();
@@ -215,7 +227,7 @@ document.addEventListener('click', (event) => {
       exportSelectedToSTL();
       break;
 
-    // --- Control Window & Panel Handlers ---
+    // --- Window & Panel Controls ---
     case 'close-window':
       cancelSketch();
       clearPreviews();
@@ -231,6 +243,7 @@ document.addEventListener('click', (event) => {
       const count = Number(document.querySelector('#circ-pat-count')?.value) || 6;
       clearPreviews();
       undoStack.push(new circularPattern(Object.values(selectedObjects)[0], axis, radius, count));
+      updateUndoRedoButtons();
       unselectTool();
       break;
     }
@@ -243,6 +256,7 @@ document.addEventListener('click', (event) => {
       const countB = Number(document.querySelector('#rect-pat-count-b')?.value) || 4;
       clearPreviews();
       undoStack.push(new rectangularPattern(Object.values(selectedObjects)[0], plane, width, countA, length, countB));
+      updateUndoRedoButtons();
       unselectTool();
       break;
     }
@@ -258,7 +272,7 @@ document.addEventListener('click', (event) => {
 });
 
 // ==========================================
-// 3. LIVE EDITOR PREVIEW INPUT LISTENERS
+// 4. LIVE EDITOR PREVIEW INPUT LISTENERS
 // ==========================================
 
 if (editorControls) {
@@ -273,10 +287,10 @@ if (editorControls) {
 }
 
 // ==========================================
-// 4. ACTION HELPER FUNCTIONS & CUSTOM EVENTS
+// 5. HELPER FUNCTIONS & CUSTOM EVENTS
 // ==========================================
 
-function updateUndoRedoButtons() {
+export function updateUndoRedoButtons() {
   const undoBtn = document.getElementById('undo-button');
   const redoBtn = document.getElementById('redo-button');
   if (undoBtn) undoBtn.disabled = undoStack.length === 0;
@@ -287,8 +301,10 @@ function executeCombine(operation, name) {
   const selection = Object.values(selectedObjects);
   if (selection.length > 0) {
     undoStack.push(new combineObjects(selection, operation, name));
+    updateUndoRedoButtons();
   } else {
     booleanToSelection(operation, name);
+    updateUndoRedoButtons();
   }
 }
 
@@ -308,20 +324,10 @@ function handleExtrudeApply() {
   const symmetric = symmetricInput ? symmetricInput.checked : false;
 
   clearPreviews();
+  deselectObjects();
 
-  if (typeof extrudeSketchCommand === 'function') {
-    undoStack.push(new extrudeSketchCommand(selectedSketch, depth, symmetric));
-  } else {
-    const extrudedMesh = extrudeSketchMesh(
-      selectedSketch.userData.points2D,
-      selectedSketch.userData.basis,
-      depth,
-      symmetric
-    );
-    if (extrudedMesh) {
-      instantiateObject(extrudedMesh, selectedSketch.name + " Extrusion", true);
-    }
-  }
+  undoStack.push(new extrudeSketchCommand(selectedSketch, depth, symmetric, selectedSketch.name + " Extrusion"));
+  updateUndoRedoButtons();
 
   unselectTool();
 }
@@ -349,9 +355,8 @@ function exportSelectedToSTL() {
 document.addEventListener('sketch-request-finish', () => {
   const sketchData = finishSketch();
   if (sketchData) {
-    const sketchMesh = buildSketchLine(sketchData.points2D, sketchData.basis, 'Sketch');
-    deselectObjects();
-    selectObjects([sketchMesh]);
+    undoStack.push(new createSketchCommand(sketchData, 'Sketch'));
+    updateUndoRedoButtons();
     unselectTool();
   }
 });
@@ -367,6 +372,18 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (e.ctrlKey && e.key.toLowerCase() === 'z') {
-    undoLastPoint();
+    if (isSketchActive()) {
+      undoLastPoint();
+    } else if (e.shiftKey) {
+      if (redoStack.length > 0) {
+        redo();
+        updateUndoRedoButtons();
+      }
+    } else {
+      if (undoStack.length > 0) {
+        undo();
+        updateUndoRedoButtons();
+      }
+    }
   }
 });
