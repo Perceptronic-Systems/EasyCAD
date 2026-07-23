@@ -1,17 +1,29 @@
 import { color } from "three/tsl";
 import { scene } from './camera.js';
-import { selectedObjects, setActiveTool, activeTool, selectionGroup, getObjectColor, setObjectColor, transformHelper, generateCircularPattern, generateRectangularPattern, clearPreviews, applyPreviews } from "./cad_tools.js";
+import { 
+  selectedObjects, 
+  setActiveTool, 
+  activeTool, 
+  selectionGroup, 
+  getObjectColor, 
+  setObjectColor, 
+  transformHelper, 
+  generateCircularPattern, 
+  generateRectangularPattern, 
+  clearPreviews, 
+  applyPreviews, 
+  deselectObjects, 
+  selectObjects 
+} from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup } from "./transform_controls.js";
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';
-import { RectAreaLightTexturesLib } from "three/examples/jsm/lights/RectAreaLightTexturesLib.js";
-
+import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh } from './sketch_tools.js';
 
 const defaultSelection = 'nothing selected';
 export const selectionText = document.querySelector("#selected");
 updateSelectionText();
-
 
 // Editor controls functionality
 export const editorControls = document.querySelector("#editor-controls");
@@ -22,7 +34,7 @@ export function setEditor(content_items) {
   for (const item of content_items) {
     let domElement;
     if (item.element == "property") {
-      domElement = document.createElement('div')
+      domElement = document.createElement('div');
       domElement.classList.add('row');
       const label = document.createElement('span');
       const value = document.createElement('input');
@@ -75,17 +87,18 @@ export function setEditor(content_items) {
       picker.value = getObjectColor();
       domElement.appendChild(picker);
     } else if (item.element == "checkbox") {
-      domElement = document.createElement('div')
+      domElement = document.createElement('div');
       domElement.classList.add('row');
       const label = document.createElement('label');
+      label.textContent = item.content;
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.id = item.id;
-      checkbox.value = item.defaultValue;
+      checkbox.checked = item.defaultValue;
       domElement.appendChild(label);
       domElement.appendChild(checkbox);
     } else if (item.element == "title") {
-      domElement = document.createElement('div')
+      domElement = document.createElement('div');
       domElement.classList.add('row');
       const close = document.createElement('button');
       const title = document.createElement('h3');
@@ -96,7 +109,7 @@ export function setEditor(content_items) {
       domElement.appendChild(title);
       domElement.appendChild(close);
     } else if (item.element == "confirmation") {
-      domElement = document.createElement('div')
+      domElement = document.createElement('div');
       domElement.classList.add('row');
       const apply = document.createElement('button');
       apply.id = item.id;
@@ -123,7 +136,8 @@ export function setTool(tool) {
   if (activeTool === tool) return;
   editorControls.innerHTML = "";
   const selection = Object.values(selectedObjects);
-  if (activeTool != tool && (selection.length > 0 || tool === 'paint')) {
+  
+  if (activeTool != tool && (selection.length > 0 || tool === 'paint' || tool === 'sketch')) {
     setActiveTool(tool);
     switch (tool) {
       case "move":
@@ -136,7 +150,7 @@ export function setTool(tool) {
         activateTransformControls(selectionGroup, selectedObjects, 'translate');
         break;
       case "scale":
-        const size = getSize(selectionGroup)
+        const size = getSize(selectionGroup);
         setEditor([{ element: 'title', defaultValue: 'Scale Object' },
         { element: 'property', content: "Snap amount", id: "snap_scale_amount", defaultValue: snap.scale, unit: 'mm' },
         { element: 'property', content: "X", id: "scale-x", defaultValue: size.x, unit: 'mm', focused: 'true' },
@@ -156,7 +170,7 @@ export function setTool(tool) {
         break;
       case "paint":
         setEditor([{ element: 'title', defaultValue: 'Color Picker' },
-          {element: 'color-picker', id: 'color-picker' }
+          { element: 'color-picker', id: 'color-picker' }
         ]);
         deactivateTransformControls();
         break;
@@ -180,50 +194,88 @@ export function setTool(tool) {
         ]);
         updateTransform();
         break;
+      case "sketch":
+        setEditor([
+          { element: 'title', defaultValue: 'Draw Sketch' },
+          { element: 'dropdown', content: 'Plane', id: 'sketch-plane', defaultValue: 'XZ', options: ['XZ', 'XY', 'YZ'] },
+          { element: 'property', content: 'Offset', id: 'sketch-offset', defaultValue: 0, unit: 'mm' },
+          { element: 'confirmation', id: 'finish-sketch-btn' }
+        ]);
+        const plane = document.querySelector('#sketch-plane').value;
+        const offset = Number(document.querySelector('#sketch-offset').value) || 0;
+        startSketch(plane, offset);
+        break;
+      case "extrude": {
+        const selectionList = Object.values(selectedObjects);
+        // Find sketch either by isSketch flag or sketch metadata
+        const selectedSketch = selectionList.find(
+          m => m && m.userData && (m.userData.isSketch)
+        );
+
+        if (!selectedSketch) {
+          unselectTool();
+          hideEditor();
+          alert("Please select a 2D sketch profile first!");
+          return;
+        }
+
+        deactivateTransformControls();
+        setEditor([
+          { element: 'title', defaultValue: 'Extrude Sketch' },
+          { element: 'property', content: 'Depth', id: 'extrude-depth', defaultValue: 20, unit: 'mm', focused: true },
+          { element: 'checkbox', content: 'Symmetric', id: 'extrude-symmetric', defaultValue: false },
+          { element: 'confirmation', id: 'apply-extrude' }
+        ]);
+
+        updateTransform();
+        break;
+      }
     }
   }
 }
+
 export function unselectTool() {
   setActiveTool(null);
+  clearPreviews();
   deactivateTransformControls();
   hideEditor();
 }
 
 export function updateEditorControls() {
   if (editorControls.innerHTML != "") {
-        switch (activeTool) {
-        case "move":
-            const x_pos = editorControls.querySelector('#pos-x');
-            const y_pos = editorControls.querySelector('#pos-y');
-            const z_pos = editorControls.querySelector('#pos-z');
-            x_pos.value = selectionGroup.position.x;
-            y_pos.value = selectionGroup.position.y;
-            z_pos.value = selectionGroup.position.z;
-            break;
-        case "scale":
-            const x_size = editorControls.querySelector('#scale-x');
-            const y_size = editorControls.querySelector('#scale-y');
-            const z_size = editorControls.querySelector('#scale-z');
-            updateSnap(selectionGroup);
-            const size = getSize(selectionGroup);
-            x_size.value = size.x.toFixed(2);
-            y_size.value = size.y.toFixed(2);
-            z_size.value = size.z.toFixed(2);
-            break;
-        case "rotate":
-            const x_rot = editorControls.querySelector('#rot-x');
-            const y_rot = editorControls.querySelector('#rot-y');
-            const z_rot = editorControls.querySelector('#rot-z');
-            x_rot.value = radToDeg(selectionGroup.rotation.x);
-            y_rot.value = radToDeg(selectionGroup.rotation.y);
-            z_rot.value = radToDeg(selectionGroup.rotation.z);
-            break;
-        case "paint":
-          const color_picker = editorControls.querySelector('#color-picker');
-          color_picker.value = getObjectColor();
-          break;
-        }
+    switch (activeTool) {
+      case "move":
+        const x_pos = editorControls.querySelector('#pos-x');
+        const y_pos = editorControls.querySelector('#pos-y');
+        const z_pos = editorControls.querySelector('#pos-z');
+        x_pos.value = selectionGroup.position.x;
+        y_pos.value = selectionGroup.position.y;
+        z_pos.value = selectionGroup.position.z;
+        break;
+      case "scale":
+        const x_size = editorControls.querySelector('#scale-x');
+        const y_size = editorControls.querySelector('#scale-y');
+        const z_size = editorControls.querySelector('#scale-z');
+        updateSnap(selectionGroup);
+        const size = getSize(selectionGroup);
+        x_size.value = size.x.toFixed(2);
+        y_size.value = size.y.toFixed(2);
+        z_size.value = size.z.toFixed(2);
+        break;
+      case "rotate":
+        const x_rot = editorControls.querySelector('#rot-x');
+        const y_rot = editorControls.querySelector('#rot-y');
+        const z_rot = editorControls.querySelector('#rot-z');
+        x_rot.value = radToDeg(selectionGroup.rotation.x);
+        y_rot.value = radToDeg(selectionGroup.rotation.y);
+        z_rot.value = radToDeg(selectionGroup.rotation.z);
+        break;
+      case "paint":
+        const color_picker = editorControls.querySelector('#color-picker');
+        color_picker.value = getObjectColor();
+        break;
     }
+  }
 }
 
 transformControls.addEventListener('objectChange', (event) => {
@@ -275,6 +327,27 @@ export function updateTransform() {
       const countB = Number(document.querySelector('#rect-pat-count-b').value) || 4;
       generateRectangularPattern(Object.values(selectedObjects)[0], plane, width, countA, length, countB, true);
       break;
+    case 'extrude': {
+      clearPreviews();
+
+      const depth = Number(document.querySelector('#extrude-depth')?.value) || 1;
+      const symmetric = document.querySelector('#extrude-symmetric')?.checked || false;
+
+      const selectedSketch = Object.values(selectedObjects).find(m => m.userData && m.userData.isSketch);
+      if (!selectedSketch) break;
+
+      const { points2D, basis } = selectedSketch.userData;
+
+      const previewMesh = extrudeSketchMesh(points2D, basis, depth, symmetric);
+      
+      previewMesh.userData.tag = 'preview';
+      previewMesh.name = selectedSketch.name + " Preview";
+      previewMesh.material.opacity = 0.6;
+      previewMesh.material.transparent = true;
+
+      scene.add(previewMesh);
+      break;
+    }
   }
   transformHelper.update();
 }

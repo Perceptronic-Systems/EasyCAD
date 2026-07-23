@@ -13,15 +13,29 @@ import { AxesHelper } from 'three/webgpu';
 export let activeTool = null;
 export const loader = new GLTFLoader();
 
-// Ground Plane
+// Ground Plane - Adjusted render order & offset to eliminate Z-fighting with sketch overlays
 export const gridHelper = new THREE.GridHelper(260, 26, 0x252525, 0x444444);
 gridHelper.name = 'grid';
+gridHelper.renderOrder = 0;
+if (gridHelper.material) {
+  gridHelper.material.polygonOffset = true;
+  gridHelper.material.polygonOffsetFactor = 2;
+  gridHelper.material.polygonOffsetUnits = 2;
+}
 scene.add(gridHelper);
+
 const createAxis = (start, end, color) => {
   const points = [new THREE.Vector3(...start), new THREE.Vector3(...end)];
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
-  const material = new THREE.LineBasicMaterial({ color: color });
-  return new THREE.Line(geometry, material);
+  const material = new THREE.LineBasicMaterial({ 
+    color: color,
+    polygonOffset: true,
+    polygonOffsetFactor: 2,
+    polygonOffsetUnits: 2
+  });
+  const axisLine = new THREE.Line(geometry, material);
+  axisLine.renderOrder = 0;
+  return axisLine;
 }
 const xAxis = createAxis([-130, 0, 0], [130, 0, 0], 0x992323);
 const zAxis = createAxis([0, 0, -130], [0, 0, 130], 0x2323f99);
@@ -64,19 +78,16 @@ function createSlicerDiagnosticMesh(csgInput) {
     const diagnosticGroup = new THREE.Group();
     let cleanGeometry;
 
-    // 1. SAFELY EXTRACT AND NORMALIZE GEOMETRY
     if (!csgInput) {
         console.error("Diagnostic tool received null or undefined input.");
         return diagnosticGroup;
     }
 
-    // Extract geometry if the raw evaluator output object was passed directly
     const rawGeo = csgInput.geometry ? csgInput.geometry : csgInput;
 
     if (rawGeo instanceof THREE.BufferGeometry) {
         cleanGeometry = rawGeo.clone();
     } else if (rawGeo.attributes) {
-        // If it looks like a geometry duck, build a formal one
         cleanGeometry = new THREE.BufferGeometry();
         Object.keys(rawGeo.attributes).forEach(key => {
             cleanGeometry.setAttribute(key, rawGeo.attributes[key]);
@@ -87,10 +98,7 @@ function createSlicerDiagnosticMesh(csgInput) {
         return diagnosticGroup;
     }
 
-    // 2. WELD AND COMPUTE MISSING METADATA
-    // CSG outputs often lack index structures or normals, which causes the crash
     if (!cleanGeometry.index) {
-        // If non-indexed, mergeVertices will index it automatically
         cleanGeometry = BufferGeometryUtils.mergeVertices(cleanGeometry, 1e-4);
     } else {
         cleanGeometry = BufferGeometryUtils.mergeVertices(cleanGeometry, 1e-4);
@@ -98,17 +106,15 @@ function createSlicerDiagnosticMesh(csgInput) {
     
     cleanGeometry.computeVertexNormals();
 
-    // 3. CREATE STRICTOR VISUAL MESH (Matches Slicer Performance)
     const strictMaterial = new THREE.MeshStandardMaterial({
         color: 0x555555,
         roughness: 0.4,
-        side: THREE.FrontSide, // Missing faces will show as holes here!
+        side: THREE.FrontSide,
     });
     
     const visualMesh = new THREE.Mesh(cleanGeometry, strictMaterial);
     diagnosticGroup.add(visualMesh);
 
-    // 4. HIGHLIGHT BOUNDARY HOLES (NON-MANIFOLD EDGES)
     const index = cleanGeometry.index;
     const position = cleanGeometry.attributes.position;
 
@@ -174,18 +180,13 @@ export function createPrimitive(name, shape, size, position = [0, 0, 0], objectM
   } else if (shape == "wedge" && size.length === 3) {
     const [w, h, d] = [size[0] / 2, size[1], size[2] / 2];
     const vertices = new Float32Array([
-      // Bottom (2 tris)
       -w, 0, -d,   w, 0, -d,  -w, 0,  d,
        w, 0, -d,   w, 0,  d,  -w, 0,  d,
-      // Slope (2 tris)
        w, h, -d,  -w, h, -d,  -w, 0,  d,
        w, 0,  d,   w, h, -d,  -w, 0,  d,
-      // Back wall (2 tris)
       -w, h, -d,   w, h, -d,  -w, 0, -d,
        w, h, -d,   w, 0, -d,  -w, 0, -d,
-      // Left cap (1 tri)
       -w, h, -d,  -w, 0, -d,  -w, 0,  d,
-      // Right cap (1 tri)
        w, 0, -d,   w, h, -d,   w, 0,  d,
     ]);
     const wedgeGeo = new THREE.BufferGeometry();
@@ -198,6 +199,7 @@ export function createPrimitive(name, shape, size, position = [0, 0, 0], objectM
   mesh.position.set(position[0], position[1], position[2]);
   return instantiateObject(mesh, name, selectOnFinish);
 }
+
 export function removeSelected() {
   const meshes = selectionGroup.children;
   deleteObjects(meshes);
@@ -217,14 +219,11 @@ export function deleteObjects(meshes) {
   });
 }
 
-
 // Selection Functionality
 export let selectedObjects = {};
 export const selectionGroup = new THREE.Group();
-export const transformHelper = new THREE.BoxHelper(selectionGroup, 0xffff00); // Yellow outline
+export const transformHelper = new THREE.BoxHelper(selectionGroup, 0xffff00);
 scene.add(transformHelper);
-
-let test = 0;
 
 export function updateSelectionOutline() {
   if (selectionGroup.children.length === 0) {
@@ -240,11 +239,11 @@ export function selectObjects(meshes, keep = false) {
     paintColor = getObjectColor();
     deselectObjects(keep);
     meshes.filter(mesh => objects.has(mesh.name)).forEach(mesh => {
-      selectedObjects[mesh.name] = mesh
+      selectedObjects[mesh.name] = mesh;
       outlineObject(mesh);
     });
     defineSelectionGroup(selectionGroup, selectedObjects);
-    if (activeTool == null || activeTool === 'paint') {
+    if (activeTool == null || activeTool === 'paint' || activeTool === 'extrude') {
       deactivateTransformControls();
     } else {
       transformControls.attach(selectionGroup);
@@ -272,8 +271,7 @@ export function deselectObjects(keep=false) {
   transformHelper.visible = false;
 }
 
-
-//Preview functionality
+// Preview functionality
 export function clearPreviews() {
   const previews = scene.children.filter(child => child.userData.tag === 'preview');
   previews.forEach(preview => {
@@ -310,7 +308,7 @@ export function pasteClipboard() {
   }
 }
 
-//Keypress for shift selection and control
+// Keypress for shift selection and control
 export let shiftDown = false;
 export let ctrlDown = false;
 document.addEventListener('keydown', (event) => {
@@ -328,7 +326,7 @@ document.addEventListener('keyup', (event) => {
   if (!event.ctrlKey) ctrlDown = false;
 });
 
-// Raycasting
+// Raycasting with Line Threshold Support for Easy Line Selection
 const mouse = new THREE.Vector2();
 function onMouseClick(event) {
   if (transformControls && transformControls.dragging) return;
@@ -337,22 +335,27 @@ function onMouseClick(event) {
   mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycast();
 }
+
 const raycaster = new THREE.Raycaster();
+// Increase line selection threshold so users don't have to click directly on line pixels
+raycaster.params.Line.threshold = 5.0;
+
 function raycast() {
   raycaster.setFromCamera(mouse, camera);
-  let meshes = [];
+  let targets = [];
   scene.traverse((child) => {
-    if (child.isMesh && objects.has(child.name)) {
-      meshes.push(child);
+    if ((child.isMesh || child.isLine) && objects.has(child.name)) {
+      targets.push(child);
     }
   });
-  const intersects = raycaster.intersectObjects(meshes, true);
+  const intersects = raycaster.intersectObjects(targets, true);
   if (intersects.length > 0) {
     const hit = intersects[0].object;
     selectObjects([hit], shiftDown || ctrlDown);
-  }
-  if (intersects.length == 0) {
-    activeTool = null;
+  } else {
+    if (activeTool !== 'sketch') {
+      activeTool = null;
+    }
     deselectObjects();
   }
 }
@@ -370,7 +373,7 @@ canvas.addEventListener('mouseup', (event) => {
   if (deltaX < quickClickThreshold && deltaY < quickClickThreshold) {
     onMouseClick(event);
   }
-})
+});
 
 // Tool Functionality
 export const setActiveTool = (tool) => {
@@ -383,20 +386,28 @@ export function getObjectColor() {
   let color = paintColor;
   let colors = []
   let matching = true;
-  Object.values(selectedObjects).forEach(mesh => colors.push(`#${mesh.material.color.getHexString()}`));
-  colors.forEach(c => {
-    if (c !== colors[0]) {
-      matching = false;
+  Object.values(selectedObjects).forEach(mesh => {
+    if (mesh.material && mesh.material.color) {
+      colors.push(`#${mesh.material.color.getHexString()}`);
     }
-  })
-  if (matching) color = colors[0];
+  });
+  if (colors.length > 0) {
+    colors.forEach(c => {
+      if (c !== colors[0]) {
+        matching = false;
+      }
+    });
+    if (matching) color = colors[0];
+  }
   return color;
 }
 
 export function setObjectColor(color) {
   paintColor = color;
   Object.values(selectedObjects).forEach(mesh => {
-    mesh.material.color.set(paintColor);
+    if (mesh.material && mesh.material.color) {
+      mesh.material.color.set(paintColor);
+    }
   })
 }
 
@@ -445,19 +456,15 @@ export function booleanOperation(operation_type, meshes, resultName) {
     baseBrush.scale.copy(result.scale);
     baseBrush.updateMatrixWorld();
   }
-  //result = createSlicerDiagnosticMesh(result);
   instantiateObject(result, resultName, true);
   return result;
 }
-
-
 
 export function generateCircularPattern(mesh, axis, radius, n, preview) {
   if (preview) clearPreviews();
   mesh.updateMatrixWorld(true);
   const center = new THREE.Vector3();
   mesh.getWorldPosition(center);
-  console.log(center);
   const axes = ['x', 'y', 'z'].filter(a => a !== axis);
   let meshes = [];
   for (let i = 0; i < n; i++) {

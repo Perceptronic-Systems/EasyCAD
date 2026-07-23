@@ -2,6 +2,7 @@ import { select } from 'three/tsl';
 import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, selectionGroup, selectedObjects, transformHelper, deselectObjects, selectObjects } from './cad_tools.js';
 import { activateTransformControls, defineSelectionGroup, transformControls } from './transform_controls.js';
 import { generateCircularPattern, generateRectangularPattern, activeTool, clipboard, createName } from './cad_tools.js';
+import { buildSketchLine, extrudeSketchMesh } from './sketch_tools.js';
 import { scene } from './camera.js';
 import * as THREE from 'three';
 
@@ -403,4 +404,65 @@ export class rectangularPattern {
         selectObjects([this.mesh]);
         redoStack.push(this);
     }
+}
+
+export class createSketchCommand {
+  constructor(sketchData, name = 'Sketch') {
+    this.points2D = sketchData.points2D;
+    this.basis = sketchData.basis;
+    this.planeName = sketchData.planeName;
+    this.name = name;
+    this.mesh = null;
+    this.execute();
+  }
+
+  execute() {
+    this.mesh = buildSketchLine(this.points2D, this.basis, this.planeName);
+    if (this.savedUuid) this.mesh.uuid = this.savedUuid;
+  }
+
+  undo() {
+    this.savedUuid = this.mesh.uuid;
+    deselectObjects();
+    deleteObjects([this.mesh]);
+    redoStack.push(this);
+  }
+}
+
+export class extrudeSketchCommand {
+  constructor(sketchMesh, depth, symmetric = false, resultName = 'Extruded Part') {
+    this.sketchMesh = sketchMesh;
+    this.depth = depth;
+    this.symmetric = symmetric;
+    this.resultName = resultName;
+
+    this.points2D = sketchMesh.userData.points2D;
+    this.basis = sketchMesh.userData.basis;
+    this.sketchUuid = sketchMesh.uuid;
+    this.sketchName = sketchMesh.name;
+
+    this.extrudedMesh = null;
+    this.execute();
+  }
+
+  execute() {
+    const liveSketch = scene.getObjectByProperty('uuid', this.sketchUuid);
+    if (liveSketch) deleteObjects([liveSketch]);
+
+    const rawMesh = extrudeSketchMesh(this.points2D, this.basis, this.depth, this.symmetric);
+    if (this.savedExtrudeUuid) rawMesh.uuid = this.savedExtrudeUuid;
+
+    this.extrudedMesh = instantiateObject(rawMesh, this.resultName, true);
+  }
+
+  undo() {
+    this.savedExtrudeUuid = this.extrudedMesh.uuid;
+    deselectObjects();
+    deleteObjects([this.extrudedMesh]);
+
+    const restoredSketch = buildSketchLine(this.points2D, this.basis, this.sketchName);
+    restoredSketch.uuid = this.sketchUuid;
+
+    redoStack.push(this);
+  }
 }

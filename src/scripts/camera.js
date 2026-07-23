@@ -144,29 +144,33 @@ class orbitControls {
     });
   }
   initListeners() {
-    this.domElement.addEventListener('mousedown', (e) => {
-      this.mouseButton = e.button;
-      this.isDragging = true;
-      this.prevMouse = { x: e.clientX, y: e.clientY };
-    });
-    window.addEventListener('mousemove', (e) => {
-      if (!this.isDragging || !this.active) return;
-      const deltaX = e.clientX - this.prevMouse.x;
-      const deltaY = e.clientY - this.prevMouse.y;
-      if (this.mouseButton === 0) {
-        this.theta += deltaX * this.sensitivity;
-        this.phi -= deltaY * this.sensitivity;
-      } else if (this.mouseButton === 2) {
-        const matrix = new THREE.Matrix4()
-        matrix.extractRotation(this.cam.matrix);
-        const left = new THREE.Vector3(-1, 0, 0).applyMatrix4(matrix);
-        const up = new THREE.Vector3(0, 1, 0).applyMatrix4(matrix);
-        this.target.addScaledVector(left, (deltaX * this.panSpeed) / this.cam.zoom);
-        this.target.addScaledVector(up, (deltaY * this.panSpeed) / this.cam.zoom);
-      }
-      this.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.phi));
-      this.prevMouse = { x: e.clientX, y: e.clientY };
-      this.update();
+      this.domElement.addEventListener('mousedown', (e) => {
+        // If controls are inactive (e.g. during sketching), do not trigger camera drag
+        if (!this.active) return;
+        
+        this.mouseButton = e.button;
+        this.isDragging = true;
+        this.prevMouse = { x: e.clientX, y: e.clientY };
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!this.isDragging || !this.active) return; 
+        const deltaX = e.clientX - this.prevMouse.x;
+        const deltaY = e.clientY - this.prevMouse.y;
+        if (this.mouseButton === 0) {
+          this.theta += deltaX * this.sensitivity;
+          this.phi -= deltaY * this.sensitivity;
+        } else if (this.mouseButton === 2) {
+          const matrix = new THREE.Matrix4()
+          matrix.extractRotation(this.cam.matrix);
+          const left = new THREE.Vector3(-1, 0, 0).applyMatrix4(matrix);
+          const up = new THREE.Vector3(0, 1, 0).applyMatrix4(matrix);
+          this.target.addScaledVector(left, (deltaX * this.panSpeed) / this.cam.zoom);
+          this.target.addScaledVector(up, (deltaY * this.panSpeed) / this.cam.zoom);
+        }
+        this.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.phi));
+        this.prevMouse = { x: e.clientX, y: e.clientY };
+        this.update();
     });
     window.addEventListener('mouseup', () => this.isDragging = false);
     this.domElement.addEventListener('wheel', (e) => {

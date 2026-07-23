@@ -10,7 +10,10 @@ document.addEventListener('keydown', (event) => {
   switch (event.key.toLowerCase()) {
     case "escape":
       event.preventDefault();
-      unselectTool()
+      if (isSketchActive()) {
+        cancelSketch();
+      }
+      unselectTool();
       break;
     case 'delete':
       event.preventDefault();
@@ -27,17 +30,15 @@ document.addEventListener('keydown', (event) => {
         }
       }
       break;
-    case 'z':
+    case "z":
       if (ctrlDown) {
         event.preventDefault();
-        if (shiftDown) {
-          if (redoStack.length > 0) {
-            redo();
-          }
+        if (isSketchActive()) {
+          undoLastPoint(); // Step back one point in active sketch session
+        } else if (shiftDown) {
+          if (redoStack.length > 0) redo();
         } else {
-          if (undoStack.length > 0) {
-            undo();
-          }
+          if (undoStack.length > 0) undo();
         }
       }
       break;
