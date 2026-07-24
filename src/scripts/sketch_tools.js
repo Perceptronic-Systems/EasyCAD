@@ -60,6 +60,9 @@ export function setSketchPlane(planeName = 'xz', offset = 0) {
 
   sketchPlane.setFromNormalAndCoplanarPoint(normal, origin);
   currentBasis = { u, v, normal, origin };
+
+  // Dynamically re-align the camera whenever the plane changes
+  alignCameraToPlane(currentPlaneName);
 }
 
 /**

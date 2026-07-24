@@ -348,6 +348,14 @@ export function updateTransform() {
       scene.add(previewMesh);
       break;
     }
+    case 'sketch': {
+      const plane = document.querySelector('#sketch-plane')?.value || 'XZ';
+      const offset = Number(document.querySelector('#sketch-offset')?.value) || 0;
+      
+      // Re-configure sketch plane and auto-adjust the view camera
+      setSketchPlane(plane, offset);
+      break;
+    }
   }
   transformHelper.update();
 }
