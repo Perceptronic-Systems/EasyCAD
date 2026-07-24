@@ -40,7 +40,8 @@ import {
   circularPattern, 
   rectangularPattern,
   extrudeSketchCommand,
-  createSketchCommand
+  createSketchCommand,
+  addImageReferenceCommand
 } from './commands.js';
 
 // ==========================================
@@ -68,6 +69,18 @@ export const redoButton = document.getElementById('redo-button');
 export const paintButton = document.getElementById('paint-button');
 export const circPatButton = document.getElementById('circular');
 export const rectPatButton = document.getElementById('rectangular');
+export const importImageButton = document.querySelector('#import-image-button');
+export const imageFileInput = document.querySelector('#image-file-input');
+
+if (imageFileInput) {
+  imageFileInput.addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (file) {
+      new addImageReferenceCommand(file);
+      updateUndoRedoButtons();
+    }
+  });
+}
 
 // ==========================================
 // 3. SINGLE GLOBAL DELEGATED CLICK LISTENER
@@ -267,6 +280,14 @@ document.addEventListener('click', (event) => {
 
     case 'apply-extrude':
       handleExtrudeApply();
+      break;
+    // --- Image Import ---
+    case 'import-image-button':
+    case 'import-image':
+      if (imageFileInput) {
+        imageFileInput.value = ''; // Reset so re-selecting the same file fires 'change'
+        imageFileInput.click();
+      }
       break;
   }
 });

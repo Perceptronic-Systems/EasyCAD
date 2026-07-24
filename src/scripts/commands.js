@@ -525,3 +525,76 @@ export class extrudeSketchCommand {
     redoStack.push(this);
   }
 }
+
+export class addImageReferenceCommand {
+  constructor(file) {
+    this.file = file;
+    this.mesh = null;
+    this.savedUuid = null;
+    
+    clearRedoStack();
+    this.execute();
+  }
+
+  execute() {
+    if (this.mesh) {
+      // Re-add on Redo
+      instantiateObject(this.mesh, this.mesh.name, true, false, true);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // 1. Maintain image aspect ratio (default base width of 50 units)
+        const baseWidth = 50;
+        const aspectRatio = img.height / img.width;
+        const baseHeight = baseWidth * aspectRatio;
+
+        // 2. Create Texture & Material
+        const texture = new THREE.Texture(img);
+        texture.needsUpdate = true;
+        // Correct color space for Three.js rendering
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        const material = new THREE.MeshBasicMaterial({
+          map: texture,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.8,         // Semi-transparent so CAD models underneath remain visible
+          depthWrite: false     // Prevents depth sorting glitch when viewing behind object geometry
+        });
+
+        // 3. Create Plane Mesh
+        const geometry = new THREE.PlaneGeometry(baseWidth, baseHeight);
+        // Rotate flat onto XZ grid by default
+        geometry.rotateX(-Math.PI / 2);
+
+        const planeMesh = new THREE.Mesh(geometry, material);
+        planeMesh.position.set(0, 0.1, 0); // Slight Y offset to avoid grid z-fighting
+        
+        // Mark as reference image so raycaster/selection logic recognizes it
+        planeMesh.userData.isReferenceImage = true;
+
+        // 4. Instantiate & Track Object
+        const name = createName("Reference Image");
+        this.mesh = instantiateObject(planeMesh, name, true);
+        this.savedUuid = this.mesh.uuid;
+
+        // Push command to stack after asynchronous image load completes
+        undoStack.push(this);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(this.file);
+  }
+
+  undo() {
+    if (this.mesh) {
+      deselectObjects();
+      deleteObjects([this.mesh]);
+      redoStack.push(this);
+    }
+  }
+}
