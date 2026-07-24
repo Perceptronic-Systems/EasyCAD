@@ -56,11 +56,13 @@
             </div>
           </div>
           <button id="sketch-button" class="toolbar-btn" title="Draw 2D Sketch">
-            Sketch
+            <img src="/icons/sketch.svg" alt="Circular" width="24px" height="24px" />
+            <div class="tooltip-text">Create 2D Sketch</div>
           </button>
 
           <button id="extrude-button" class="toolbar-btn" title="Extrude Sketch">
-            Extrude
+            <img src="/icons/cuboid.svg" alt="Circular" width="24px" height="24px" />
+            <div class="tooltip-text">Extrude Sketch</div>
           </button>
         </div>
         <div id="modifiers" class="container">
@@ -95,7 +97,10 @@
       <input type="file" id="image-file-input" accept="image/*" style="display: none;" />
 
       <!-- Import Button -->
-      <button id="import-image-button">Import Image Reference</button>
+      <button id="import-image-button" class="tooltip">
+        <img src="/icons/image.svg" alt="Circular" width="24px" height="24px" />
+            <div class="tooltip-text">Import Reference Image</div>
+      </button>
       <button id="export"><p id="download-icon">🢳</p><p id="download-text">Export Selected STLs</p></button>
     </div>
 
