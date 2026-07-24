@@ -316,13 +316,15 @@ export function buildSketchLine(points2DArray, basis, name = 'Sketch') {
   const material = new THREE.LineBasicMaterial({ 
     color: 0x00e1ff, 
     linewidth: 3,
+    depthTest: false,   // Prevents reference planes/images from obscuring the line
+    depthWrite: false,  // Ensures line drawing layer doesn't compete in depth buffer
     polygonOffset: true,
     polygonOffsetFactor: -5,
     polygonOffsetUnits: -5
   });
   
   const lineMesh = new THREE.Line(geometry, material);
-  lineMesh.renderOrder = 10;
+  lineMesh.renderOrder = 10; // Ensures it renders after regular geometry
 
   lineMesh.name = name;
   

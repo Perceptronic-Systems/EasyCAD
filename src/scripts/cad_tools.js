@@ -349,14 +349,14 @@ function raycast() {
     }
   });
   const intersects = raycaster.intersectObjects(targets, true);
-  if (intersects.length > 0) {
-    const hit = intersects[0].object;
-    selectObjects([hit], shiftDown || ctrlDown);
-  } else {
-    if (activeTool !== 'sketch') {
+  if (activeTool !== 'sketch'){
+    if (intersects.length > 0) {
+      const hit = intersects[0].object;
+      selectObjects([hit], shiftDown || ctrlDown);
+    } else {
       activeTool = null;
+      deselectObjects();
     }
-    deselectObjects();
   }
 }
 

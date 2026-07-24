@@ -562,7 +562,7 @@ export class addImageReferenceCommand {
           map: texture,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.8,         // Semi-transparent so CAD models underneath remain visible
+          opacity: 0.6,         // Semi-transparent so CAD models underneath remain visible
           depthWrite: false     // Prevents depth sorting glitch when viewing behind object geometry
         });
 
