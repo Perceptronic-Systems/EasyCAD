@@ -167,6 +167,11 @@ export function undoLastPoint() {
 function cleanup() {
   active = false;
   cameraControls.active = true;
+  
+  // Hide UI indicator
+  if (snapIndicator) {
+    snapIndicator.style.display = 'none';
+  }
 
   removeEventListeners();
 
@@ -201,23 +206,143 @@ function getIntersectionPoint(event) {
   return null;
 }
 
+function getFormattedSegmentLength(hoverPoint) {
+  if (points3D.length === 0) return '';
+
+  const lastPoint = points3D[points3D.length - 1];
+  const distance = lastPoint.distanceTo(hoverPoint);
+
+  // Formats to 2 decimal places (e.g. "12.50 units")
+  return `${distance.toFixed(2)}`;
+}
+
+// Add alignment threshold (in 2D plane units)
+const SNAP_ALIGNMENT_THRESHOLD_2D = 0.5; // Snap horizontal/vertical if within 0.5 units
+
+/**
+ * Applies snapping logic to a candidate 2D point based on active points in the sketch.
+ */
+
+const snapIndicator = document.createElement('div');
+snapIndicator.id = 'snap-indicator';
+snapIndicator.style.position = 'fixed';
+snapIndicator.style.pointerEvents = 'none'; // Ensure mouse clicks pass through to canvas
+snapIndicator.style.display = 'none';
+snapIndicator.style.padding = '2px 6px';
+snapIndicator.style.background = 'rgba(0, 170, 255, 0.9)';
+snapIndicator.style.color = '#ffffff';
+snapIndicator.style.fontSize = '11px';
+snapIndicator.style.fontWeight = 'bold';
+snapIndicator.style.borderRadius = '3px';
+snapIndicator.style.zIndex = '1000';
+snapIndicator.style.transform = 'translate(12px, 12px)'; // Offset slightly relative to cursor tip
+document.body.appendChild(snapIndicator);
+
+export let currentSnapTypes = [];
+
+function applySnapping2D(candidate2D) {
+  if (points2D.length === 0) {
+    currentSnapTypes = [];
+    return candidate2D.clone();
+  }
+
+  const snapped = candidate2D.clone();
+  const lastPoint = points2D[points2D.length - 1];
+  currentSnapTypes = [];
+
+  let snapH = false; // Tracks if Y-coordinate is constrained
+  let snapV = false; // Tracks if X-coordinate is constrained
+
+  // --- 1. ORTHOGONAL SNAPPING (Relative to immediate last point) ---
+  if (Math.abs(snapped.y - lastPoint.y) < SNAP_ALIGNMENT_THRESHOLD_2D) {
+    snapped.y = lastPoint.y;
+    snapH = true;
+    currentSnapTypes.push('— Horizontal');
+  }
+  if (Math.abs(snapped.x - lastPoint.x) < SNAP_ALIGNMENT_THRESHOLD_2D) {
+    snapped.x = lastPoint.x;
+    snapV = true;
+    currentSnapTypes.push('│ Vertical');
+  }
+
+  // --- 2. INLINE ALIGNMENT SNAPPING (Check against all previous points) ---
+  for (let i = 0; i < points2D.length - 1; i++) {
+    const pt = points2D[i];
+
+    // If Y isn't locked horizontally by Ortho, check for inline Horizontal alignment
+    if (!snapH && Math.abs(snapped.y - pt.y) < SNAP_ALIGNMENT_THRESHOLD_2D) {
+      snapped.y = pt.y;
+      snapH = true;
+      currentSnapTypes.push(' Align H');
+    }
+
+    // If X isn't locked vertically by Ortho, check for inline Vertical alignment
+    if (!snapV && Math.abs(snapped.x - pt.x) < SNAP_ALIGNMENT_THRESHOLD_2D) {
+      snapped.x = pt.x;
+      snapV = true;
+      currentSnapTypes.push(' Align V');
+    }
+  }
+
+  return snapped;
+}
+
 function onPointerMove(event) {
   if (!active) return;
 
   const hitPoint = getIntersectionPoint(event);
-  if (!hitPoint) return;
+  if (!hitPoint) {
+    if (snapIndicator) snapIndicator.style.display = 'none';
+    return;
+  }
 
-  hoverPoint = hitPoint;
+  // 1. Convert candidate 3D hit point to local 2D sketch coordinates
+  let candidate2D = project3DTo2D(hitPoint);
 
-  // Snap to start point if close enough
+  // 2. Check start-point snapping (closing loop)
   if (points3D.length > 2) {
     const startPoint = points3D[0];
     if (hitPoint.distanceTo(startPoint) < SNAP_THRESHOLD_WORLD) {
       hoverPoint = startPoint.clone();
+      updatePreviewLine(hoverPoint);
+
+      if (snapIndicator) {
+        const lengthStr = getFormattedSegmentLength(hoverPoint);
+        snapIndicator.textContent = `● Close Loop (${lengthStr})`;
+        snapIndicator.style.left = `${event.clientX}px`;
+        snapIndicator.style.top = `${event.clientY}px`;
+        snapIndicator.style.display = 'block';
+      }
+      return;
     }
   }
 
+  // 3. Apply Orthogonal & Alignment Snapping
+  candidate2D = applySnapping2D(candidate2D);
+
+  // 4. Project back to 3D world space
+  hoverPoint = project2DTo3D(candidate2D);
   updatePreviewLine(hoverPoint);
+
+  // 5. Update UI Indicator with Length + Snap Badges
+  if (snapIndicator) {
+    if (points3D.length > 0) {
+      const lengthStr = getFormattedSegmentLength(hoverPoint);
+      
+      // Combine length with snap labels if any exist
+      if (currentSnapTypes.length > 0) {
+        snapIndicator.textContent = `${lengthStr} | ${currentSnapTypes.join(' | ')}`;
+      } else {
+        snapIndicator.textContent = lengthStr;
+      }
+
+      snapIndicator.style.left = `${event.clientX}px`;
+      snapIndicator.style.top = `${event.clientY}px`;
+      snapIndicator.style.display = 'block';
+    } else {
+      snapIndicator.style.display = 'none';
+    }
+  }
 }
 
 function onPointerDown(event) {
@@ -235,11 +360,17 @@ function onPointerDown(event) {
     }
   }
 
-  // Add new point
-  points3D.push(hitPoint.clone());
-  points2D.push(project3DTo2D(hitPoint));
+  // Calculate local 2D point and apply snapping prior to adding it to state
+  let snapped2D = project3DTo2D(hitPoint);
+  snapped2D = applySnapping2D(snapped2D);
 
-  addPointMarker(hitPoint);
+  const final3DPoint = project2DTo3D(snapped2D);
+
+  // Add snapped points to active state
+  points3D.push(final3DPoint);
+  points2D.push(snapped2D);
+
+  addPointMarker(final3DPoint);
   updatePreviewLine();
 }
 
