@@ -2,7 +2,7 @@ import { select } from 'three/tsl';
 import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, selectionGroup, selectedObjects, transformHelper, deselectObjects, selectObjects } from './cad_tools.js';
 import { activateTransformControls, defineSelectionGroup, transformControls } from './transform_controls.js';
 import { generateCircularPattern, generateRectangularPattern, activeTool, clipboard, createName } from './cad_tools.js';
-import { buildSketchLine, extrudeSketchMesh } from './sketch_tools.js';
+import { buildSketchLine, extrudeSketchMesh, revolveSketchMesh } from './sketch_tools.js';
 import { scene } from './camera.js';
 import * as THREE from 'three';
 
@@ -515,6 +515,61 @@ export class extrudeSketchCommand {
     const liveExtrude = getMesh(this.savedExtrudeUuid) || this.extrudedMesh;
     if (liveExtrude) {
       deleteObjects([liveExtrude]);
+    }
+
+    // 2. Re-create 2D sketch with restored UUID
+    const restoredSketch = buildSketchLine(this.points2D, this.basis, this.sketchName);
+    restoredSketch.uuid = this.sketchUuid;
+    selectObjects([restoredSketch]);
+
+    redoStack.push(this);
+  }
+}
+
+export class revolveSketchCommand {
+  constructor(sketchMesh, angle, segments = 64, resultName = 'Revolved Part') {
+    this.sketchMesh = sketchMesh;
+    this.angle = angle;
+    this.segments = segments;
+    this.resultName = resultName;
+
+    this.points2D = sketchMesh.userData.points2D;
+    this.basis = sketchMesh.userData.basis;
+    this.sketchUuid = sketchMesh.uuid;
+    this.sketchName = sketchMesh.name;
+
+    this.revolvedMesh = null;
+    this.savedRevolveUuid = null;
+    clearRedoStack();
+    this.execute();
+  }
+
+  execute() {
+    // 1. Find live sketch and remove it
+    const liveSketch = getMesh(this.sketchUuid) || this.sketchMesh;
+    if (liveSketch) {
+      deleteObjects([liveSketch]);
+    }
+
+    // 2. Revolve new 3D mesh
+    const rawMesh = revolveSketchMesh(this.points2D, this.basis, this.angle, this.segments);
+    if (this.savedRevolveUuid) {
+      rawMesh.uuid = this.savedRevolveUuid;
+    }
+
+    deselectObjects();
+    this.revolvedMesh = instantiateObject(rawMesh, this.resultName, true);
+    this.savedRevolveUuid = this.revolvedMesh.uuid;
+    selectObjects([this.revolvedMesh]);
+  }
+
+  undo() {
+    deselectObjects();
+
+    // 1. Delete revolved 3D model
+    const liveRevolve = getMesh(this.savedRevolveUuid) || this.revolvedMesh;
+    if (liveRevolve) {
+      deleteObjects([liveRevolve]);
     }
 
     // 2. Re-create 2D sketch with restored UUID

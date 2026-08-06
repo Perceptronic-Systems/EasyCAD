@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { scene, camera, cameraControls, canvas } from './camera.js';
 import { instantiateObject } from './cad_tools.js';
 
@@ -516,6 +517,73 @@ export function extrudeSketchMesh(points2DArray, basis, depth = 10, symmetric = 
     roughness: 0.4,
     metalness: 0.1,
     side: THREE.DoubleSide
+  });
+
+  return new THREE.Mesh(geometry, material);
+}
+
+/**
+ * Revolves a 2D sketch profile around the sketch plane's vertical (v) axis to build a
+ * solid of revolution, the same way THREE.LatheGeometry treats a profile's x-coordinate
+ * as a radius and its y-coordinate as height along the rotation axis.
+ *
+ * A full 360° revolve wraps the swept surface back into itself (identical to how
+ * LatheGeometry naturally welds phi=0 to phi=2π), so no seam/cap faces are generated -
+ * it becomes one continuous shape rather than two touching faces where the ends meet.
+ * Any angle less than 360° leaves the profile exposed at both ends, so flat caps are
+ * added there to keep the resulting solid closed.
+ *
+ * Note: sketch points are expected to have a non-negative x (radius) value, since a
+ * profile that crosses the rotation axis would self-intersect when revolved.
+ */
+export function revolveSketchMesh(points2DArray, basis, angleDeg = 360, segments = 64) {
+  const FULL_CIRCLE_DEG = 360;
+  const isFullRevolve = angleDeg >= FULL_CIRCLE_DEG - 1e-3;
+  const angleRad = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(angleDeg, 0.01, FULL_CIRCLE_DEG));
+
+  // LatheGeometry expects (radius, height) pairs - sketch x becomes radius, y becomes height.
+  const lathePoints = points2DArray.map((p) => new THREE.Vector2(Math.max(p.x, 0), p.y));
+
+  const geometries = [
+    new THREE.LatheGeometry(lathePoints, segments, 0, isFullRevolve ? Math.PI * 2 : angleRad)
+  ];
+
+  // A partial revolve leaves the original profile exposed at phi=0 and phi=angleRad;
+  // cap those openings so the solid doesn't end up with a hole through it.
+  if (!isFullRevolve) {
+    const shape = new THREE.Shape();
+    points2DArray.forEach((pt, idx) => {
+      if (idx === 0) shape.moveTo(pt.x, pt.y);
+      else shape.lineTo(pt.x, pt.y);
+    });
+    shape.closePath();
+
+    // ShapeGeometry builds the profile in the local XY plane (z=0). Rotating by -90° about
+    // Y remaps that flat profile onto the lathe's phi=0 plane, where a point's radius (x)
+    // maps to local Z instead of local X - matching LatheGeometry's own vertex placement.
+    const startCap = new THREE.ShapeGeometry(shape);
+    startCap.rotateY(-Math.PI / 2);
+    geometries.push(startCap);
+
+    const endCap = new THREE.ShapeGeometry(shape);
+    endCap.rotateY(angleRad - Math.PI / 2);
+    geometries.push(endCap);
+  }
+
+  const geometry = BufferGeometryUtils.mergeGeometries(geometries, false);
+  geometry.computeVertexNormals();
+
+  const matrix = new THREE.Matrix4();
+  const rotationMatrix = new THREE.Matrix4().makeBasis(basis.u, basis.v, basis.normal);
+  matrix.compose(basis.origin.clone(), new THREE.Quaternion().setFromRotationMatrix(rotationMatrix), new THREE.Vector3(1, 1, 1));
+  geometry.applyMatrix4(matrix);
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x44aa88,
+    roughness: 0.4,
+    metalness: 0.1,
+    side: THREE.DoubleSide,
+    flatShading: true
   });
 
   return new THREE.Mesh(geometry, material);

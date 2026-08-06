@@ -40,6 +40,7 @@ import {
   circularPattern, 
   rectangularPattern,
   extrudeSketchCommand,
+  revolveSketchCommand,
   createSketchCommand,
   addImageReferenceCommand
 } from './commands.js';
@@ -174,6 +175,9 @@ document.addEventListener('click', (event) => {
     case 'extrude-button':
       setTool('extrude');
       break;
+    case 'revolve-button':
+      setTool('revolve');
+      break;
 
     // --- CSG / Boolean Operations ---
     case 'merge':
@@ -281,6 +285,9 @@ document.addEventListener('click', (event) => {
     case 'apply-extrude':
       handleExtrudeApply();
       break;
+    case 'apply-revolve':
+      handleRevolveApply();
+      break;
     // --- Image Import ---
     case 'import-image-button':
     case 'import-image':
@@ -348,6 +355,30 @@ function handleExtrudeApply() {
   deselectObjects();
 
   undoStack.push(new extrudeSketchCommand(selectedSketch, depth, symmetric, selectedSketch.name + " Extrusion"));
+  updateUndoRedoButtons();
+
+  unselectTool();
+}
+
+function handleRevolveApply() {
+  const selection = Object.values(selectedObjects);
+  const selectedSketch = selection.find(m => m.userData && m.userData.isSketch);
+
+  if (!selectedSketch) {
+    alert("Please select a 2D sketch profile first!");
+    return;
+  }
+
+  const angleInput = document.querySelector('#revolve-angle');
+  const segmentsInput = document.querySelector('#revolve-segments');
+
+  const angle = angleInput ? parseFloat(angleInput.value) || 360 : 360;
+  const segments = segmentsInput ? parseInt(segmentsInput.value) || 64 : 64;
+
+  clearPreviews();
+  deselectObjects();
+
+  undoStack.push(new revolveSketchCommand(selectedSketch, angle, segments, selectedSketch.name + " Revolve"));
   updateUndoRedoButtons();
 
   unselectTool();

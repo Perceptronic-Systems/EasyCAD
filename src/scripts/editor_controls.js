@@ -19,7 +19,7 @@ import { transformControls, activateTransformControls, deactivateTransformContro
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';
-import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh } from './sketch_tools.js';
+import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh } from './sketch_tools.js';
 
 const defaultSelection = 'nothing selected';
 export const selectionText = document.querySelector("#selected");
@@ -230,6 +230,31 @@ export function setTool(tool) {
         updateTransform();
         break;
       }
+      case "revolve": {
+        const revolveSelectionList = Object.values(selectedObjects);
+        // Find sketch either by isSketch flag or sketch metadata
+        const selectedSketch = revolveSelectionList.find(
+          m => m && m.userData && (m.userData.isSketch)
+        );
+
+        if (!selectedSketch) {
+          unselectTool();
+          hideEditor();
+          alert("Please select a 2D sketch profile first!");
+          return;
+        }
+
+        deactivateTransformControls();
+        setEditor([
+          { element: 'title', defaultValue: 'Revolve Sketch' },
+          { element: 'property', content: 'Angle', id: 'revolve-angle', defaultValue: 360, unit: 'deg', focused: true },
+          { element: 'property', content: 'Segments', id: 'revolve-segments', defaultValue: 64 },
+          { element: 'confirmation', id: 'apply-revolve' }
+        ]);
+
+        updateTransform();
+        break;
+      }
     }
   }
 }
@@ -354,6 +379,27 @@ export function updateTransform() {
       
       // Re-configure sketch plane and auto-adjust the view camera
       setSketchPlane(plane, offset);
+      break;
+    }
+    case 'revolve': {
+      clearPreviews();
+
+      const angle = Number(document.querySelector('#revolve-angle')?.value) || 360;
+      const segments = Number(document.querySelector('#revolve-segments')?.value) || 64;
+
+      const selectedSketch = Object.values(selectedObjects).find(m => m.userData && m.userData.isSketch);
+      if (!selectedSketch) break;
+
+      const { points2D, basis } = selectedSketch.userData;
+
+      const previewMesh = revolveSketchMesh(points2D, basis, angle, segments);
+
+      previewMesh.userData.tag = 'preview';
+      previewMesh.name = selectedSketch.name + " Preview";
+      previewMesh.material.opacity = 0.6;
+      previewMesh.material.transparent = true;
+
+      scene.add(previewMesh);
       break;
     }
   }
