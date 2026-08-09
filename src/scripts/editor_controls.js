@@ -19,7 +19,7 @@ import { transformControls, activateTransformControls, deactivateTransformContro
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';
-import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh } from './sketch_tools.js';
+import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh, setGridSnapAmount, getGridSnapAmount } from './sketch_tools.js';
 
 const defaultSelection = 'nothing selected';
 export const selectionText = document.querySelector("#selected");
@@ -199,10 +199,12 @@ export function setTool(tool) {
           { element: 'title', defaultValue: 'Draw Sketch' },
           { element: 'dropdown', content: 'Plane', id: 'sketch-plane', defaultValue: 'XZ', options: ['XZ', 'XY', 'YZ'] },
           { element: 'property', content: 'Offset', id: 'sketch-offset', defaultValue: 0, unit: 'mm' },
+          { element: 'property', content: 'Grid Snap', id: 'sketch-grid-snap', defaultValue: getGridSnapAmount(), unit: 'mm' },
           { element: 'confirmation', id: 'finish-sketch-btn' }
         ]);
         const plane = document.querySelector('#sketch-plane').value;
         const offset = Number(document.querySelector('#sketch-offset').value) || 0;
+        setGridSnapAmount(document.querySelector('#sketch-grid-snap').value);
         startSketch(plane, offset);
         break;
       case "extrude": {
@@ -376,9 +378,11 @@ export function updateTransform() {
     case 'sketch': {
       const plane = document.querySelector('#sketch-plane')?.value || 'XZ';
       const offset = Number(document.querySelector('#sketch-offset')?.value) || 0;
-      
+      const gridSnap = document.querySelector('#sketch-grid-snap')?.value;
+
       // Re-configure sketch plane and auto-adjust the view camera
       setSketchPlane(plane, offset);
+      setGridSnapAmount(gridSnap);
       break;
     }
     case 'revolve': {

@@ -220,6 +220,27 @@ function getFormattedSegmentLength(hoverPoint) {
 // Add alignment threshold (in 2D plane units)
 const SNAP_ALIGNMENT_THRESHOLD_2D = 0.5; // Snap horizontal/vertical if within 0.5 units
 
+// --- Grid Snapping ---
+// Snaps every sketch point to the nearest multiple of this amount (in mm), on top of
+// the existing ortho/alignment snapping below. Set to 0 via the editor controls to disable it.
+let gridSnapAmount = 1; // Default: snap per 1mm
+
+export function setGridSnapAmount(amount) {
+  gridSnapAmount = Number(amount) || 0;
+}
+
+export function getGridSnapAmount() {
+  return gridSnapAmount;
+}
+
+function snapToGrid2D(point2D) {
+  if (!gridSnapAmount || gridSnapAmount <= 0) return point2D.clone();
+  return new THREE.Vector2(
+    Math.round(point2D.x / gridSnapAmount) * gridSnapAmount,
+    Math.round(point2D.y / gridSnapAmount) * gridSnapAmount
+  );
+}
+
 /**
  * Applies snapping logic to a candidate 2D point based on active points in the sketch.
  */
@@ -242,14 +263,19 @@ document.body.appendChild(snapIndicator);
 export let currentSnapTypes = [];
 
 function applySnapping2D(candidate2D) {
-  if (points2D.length === 0) {
-    currentSnapTypes = [];
-    return candidate2D.clone();
+  currentSnapTypes = [];
+
+  // --- 0. GRID SNAPPING (applies first, in addition to ortho/alignment below) ---
+  const snapped = snapToGrid2D(candidate2D);
+  if (gridSnapAmount > 0 && (snapped.x !== candidate2D.x || snapped.y !== candidate2D.y)) {
+    currentSnapTypes.push('# Grid');
   }
 
-  const snapped = candidate2D.clone();
+  if (points2D.length === 0) {
+    return snapped;
+  }
+
   const lastPoint = points2D[points2D.length - 1];
-  currentSnapTypes = [];
 
   let snapH = false; // Tracks if Y-coordinate is constrained
   let snapV = false; // Tracks if X-coordinate is constrained
