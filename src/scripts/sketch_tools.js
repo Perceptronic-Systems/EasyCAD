@@ -457,6 +457,34 @@ function removeEventListeners() {
 // --- Geometry Construction & Mesh Generation ---
 
 /**
+ * The basis stored in a sketch mesh's userData is frozen at the moment the sketch was
+ * created - it never accounts for any move/rotate/scale later applied to the sketch
+ * mesh itself (e.g. via the transform controls). This computes the *effective* basis,
+ * folding the mesh's current matrixWorld into the original u/v/normal/origin so that
+ * extrude/revolve results (and previews) reflect whatever transform is currently applied
+ * to the sketch, exactly as it appears on screen.
+ */
+export function getWorldBasis(sketchMesh) {
+  const { basis } = sketchMesh.userData;
+  // The sketch may currently be parented under the transform controls' selection group,
+  // so refresh the whole graph rather than just this mesh to make sure its matrixWorld
+  // reflects the group's latest position/rotation/scale too.
+  scene.updateMatrixWorld(true);
+  const matrixWorld = sketchMesh.matrixWorld;
+
+  // Linear part only (rotation + scale, no translation) - correct for transforming
+  // direction/basis vectors, as opposed to points which also need translation.
+  const linear = new THREE.Matrix3().setFromMatrix4(matrixWorld);
+
+  return {
+    u: basis.u.clone().applyMatrix3(linear),
+    v: basis.v.clone().applyMatrix3(linear),
+    normal: basis.normal.clone().applyMatrix3(linear),
+    origin: basis.origin.clone().applyMatrix4(matrixWorld)
+  };
+}
+
+/**
  * Builds a visual line representation of a saved 2D sketch profile.
  */
 export function buildSketchLine(points2DArray, basis, name = 'Sketch') {
@@ -526,15 +554,17 @@ export function extrudeSketchMesh(points2DArray, basis, depth = 10, symmetric = 
 
   geometry.computeVertexNormals();
 
-  const matrix = new THREE.Matrix4();
   const position = basis.origin.clone();
 
   if (symmetric) {
     position.addScaledVector(basis.normal, -depth / 2);
   }
 
-  const rotationMatrix = new THREE.Matrix4().makeBasis(basis.u, basis.v, basis.normal);
-  matrix.compose(position, new THREE.Quaternion().setFromRotationMatrix(rotationMatrix), new THREE.Vector3(1, 1, 1));
+  // Built directly from the basis vectors (not via a quaternion) so that any scale
+  // baked into u/v/normal - e.g. from a scaled sketch - is preserved rather than
+  // normalized away.
+  const matrix = new THREE.Matrix4().makeBasis(basis.u, basis.v, basis.normal);
+  matrix.setPosition(position);
 
   geometry.applyMatrix4(matrix);
 
@@ -599,9 +629,11 @@ export function revolveSketchMesh(points2DArray, basis, angleDeg = 360, segments
   const geometry = BufferGeometryUtils.mergeGeometries(geometries, false);
   geometry.computeVertexNormals();
 
-  const matrix = new THREE.Matrix4();
-  const rotationMatrix = new THREE.Matrix4().makeBasis(basis.u, basis.v, basis.normal);
-  matrix.compose(basis.origin.clone(), new THREE.Quaternion().setFromRotationMatrix(rotationMatrix), new THREE.Vector3(1, 1, 1));
+  // Built directly from the basis vectors (not via a quaternion) so that any scale
+  // baked into u/v/normal - e.g. from a scaled sketch - is preserved rather than
+  // normalized away.
+  const matrix = new THREE.Matrix4().makeBasis(basis.u, basis.v, basis.normal);
+  matrix.setPosition(basis.origin);
   geometry.applyMatrix4(matrix);
 
   const material = new THREE.MeshStandardMaterial({

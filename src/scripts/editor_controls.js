@@ -19,7 +19,7 @@ import { transformControls, activateTransformControls, deactivateTransformContro
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
 
 import * as THREE from 'three';
-import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh, setGridSnapAmount, getGridSnapAmount } from './sketch_tools.js';
+import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh, setGridSnapAmount, getGridSnapAmount, getWorldBasis } from './sketch_tools.js';
 
 const defaultSelection = 'nothing selected';
 export const selectionText = document.querySelector("#selected");
@@ -363,7 +363,8 @@ export function updateTransform() {
       const selectedSketch = Object.values(selectedObjects).find(m => m.userData && m.userData.isSketch);
       if (!selectedSketch) break;
 
-      const { points2D, basis } = selectedSketch.userData;
+      const { points2D } = selectedSketch.userData;
+      const basis = getWorldBasis(selectedSketch);
 
       const previewMesh = extrudeSketchMesh(points2D, basis, depth, symmetric);
       
@@ -394,7 +395,8 @@ export function updateTransform() {
       const selectedSketch = Object.values(selectedObjects).find(m => m.userData && m.userData.isSketch);
       if (!selectedSketch) break;
 
-      const { points2D, basis } = selectedSketch.userData;
+      const { points2D } = selectedSketch.userData;
+      const basis = getWorldBasis(selectedSketch);
 
       const previewMesh = revolveSketchMesh(points2D, basis, angle, segments);
 

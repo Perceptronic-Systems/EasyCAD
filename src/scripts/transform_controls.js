@@ -40,7 +40,7 @@ export function getSize(group) {
   size.y = parseFloat(size.y.toFixed(2));
   size.z = parseFloat(size.z.toFixed(2));
   
-  // DO NOT multiply by group.scale here. box.setFromObject already accounts for scale.
+  // DO NOTa multiply by group.scale here. box.setFromObject already accounts for scale.
   return size;
 }
 

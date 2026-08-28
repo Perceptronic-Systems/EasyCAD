@@ -2,7 +2,7 @@ import { select } from 'three/tsl';
 import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, selectionGroup, selectedObjects, transformHelper, deselectObjects, selectObjects } from './cad_tools.js';
 import { activateTransformControls, defineSelectionGroup, transformControls } from './transform_controls.js';
 import { generateCircularPattern, generateRectangularPattern, activeTool, clipboard, createName } from './cad_tools.js';
-import { buildSketchLine, extrudeSketchMesh, revolveSketchMesh } from './sketch_tools.js';
+import { buildSketchLine, extrudeSketchMesh, revolveSketchMesh, getWorldBasis } from './sketch_tools.js';
 import { scene } from './camera.js';
 import * as THREE from 'three';
 
@@ -479,7 +479,7 @@ export class extrudeSketchCommand {
     this.resultName = resultName;
 
     this.points2D = sketchMesh.userData.points2D;
-    this.basis = sketchMesh.userData.basis;
+    this.basis = getWorldBasis(sketchMesh);
     this.sketchUuid = sketchMesh.uuid;
     this.sketchName = sketchMesh.name;
 
@@ -534,7 +534,7 @@ export class revolveSketchCommand {
     this.resultName = resultName;
 
     this.points2D = sketchMesh.userData.points2D;
-    this.basis = sketchMesh.userData.basis;
+    this.basis = getWorldBasis(sketchMesh);
     this.sketchUuid = sketchMesh.uuid;
     this.sketchName = sketchMesh.name;
 
