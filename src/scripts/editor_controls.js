@@ -16,7 +16,7 @@ import {
   selectObjects 
 } from "./cad_tools.js";
 import { transformControls, activateTransformControls, deactivateTransformControls, defineSelectionGroup } from "./transform_controls.js";
-import { snap, radToDeg, degToRad, getSize, setSize, updateSnap } from './transform_controls.js';
+import { snap, radToDeg, degToRad, getSize, setSize, updateSnap, clampLockedScaleAxis } from './transform_controls.js';
 
 import * as THREE from 'three';
 import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh, setGridSnapAmount, getGridSnapAmount, getWorldBasis } from './sketch_tools.js';
@@ -308,6 +308,7 @@ export function updateEditorControls() {
 transformControls.addEventListener('objectChange', (event) => {
   updateEditorControls();
   updateSnap(selectionGroup);
+  clampLockedScaleAxis(selectionGroup, selectedObjects);
   transformHelper.update();
 });
 
@@ -327,6 +328,7 @@ export function updateTransform() {
       const z_size = Number(document.querySelector('#scale-z').value) || 1;
       snap.scale = Number(document.querySelector('#snap_scale_amount').value) || 0.0;
       setSize(selectionGroup, x_size, y_size, z_size);
+      clampLockedScaleAxis(selectionGroup, selectedObjects);
       break;
     case 'rotate':
       const x_rot = degToRad(Number(document.querySelector('#rot-x').value)) || 0;

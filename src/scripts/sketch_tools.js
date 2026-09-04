@@ -518,6 +518,10 @@ export function buildSketchLine(points2DArray, basis, name = 'Sketch') {
   lineMesh.userData = {
     ...lineMesh.userData,
     isSketch: true,
+    // Vertices are baked to absolute world coordinates (see above) with an identity
+    // object transform - the transform-controls system needs to know this so it bakes
+    // moves/scales/rotations into the geometry too, instead of into position/rotation/scale.
+    bakedWorldGeometry: true,
     points2D: points2DArray,
     basis: {
       u: basis.u.clone(),
@@ -575,7 +579,12 @@ export function extrudeSketchMesh(points2DArray, basis, depth = 10, symmetric = 
     side: THREE.DoubleSide
   });
 
-  return new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(geometry, material);
+  // Vertices are baked to absolute world coordinates above, with an identity object
+  // transform - flag this so the transform-controls system bakes any later move/scale/
+  // rotate into the geometry too, instead of into position/rotation/scale.
+  mesh.userData.bakedWorldGeometry = true;
+  return mesh;
 }
 
 /**
@@ -644,5 +653,10 @@ export function revolveSketchMesh(points2DArray, basis, angleDeg = 360, segments
     flatShading: true
   });
 
-  return new THREE.Mesh(geometry, material);
+  const mesh = new THREE.Mesh(geometry, material);
+  // Vertices are baked to absolute world coordinates above, with an identity object
+  // transform - flag this so the transform-controls system bakes any later move/scale/
+  // rotate into the geometry too, instead of into position/rotation/scale.
+  mesh.userData.bakedWorldGeometry = true;
+  return mesh;
 }
