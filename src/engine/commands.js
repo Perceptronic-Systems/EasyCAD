@@ -1,8 +1,7 @@
-import { select } from 'three/tsl';
 import { booleanOperation, instantiateObject, deleteObjects, createPrimitive, selectionGroup, selectedObjects, transformHelper, deselectObjects, selectObjects } from './cad_tools.js';
 import { activateTransformControls, defineSelectionGroup, transformControls } from './transform_controls.js';
 import { generateCircularPattern, generateRectangularPattern, activeTool, clipboard, createName } from './cad_tools.js';
-import { buildSketchLine, extrudeSketchMesh, revolveSketchMesh, getWorldBasis } from './sketch_tools.js';
+import { buildSketchLine, extrudeSketchMesh, revolveSketchMesh, getWorldBasis, cloneCurveSegments } from './sketch_tools.js';
 import { scene } from './camera.js';
 import * as THREE from 'three';
 
@@ -428,6 +427,7 @@ export class rectangularPattern {
 export class createSketchCommand {
   constructor(sketchData, name = 'Sketch') {
     this.points2D = sketchData.points2D;
+    this.curveSegments = sketchData.curveSegments;
     this.basis = sketchData.basis;
     this.planeName = sketchData.planeName;
     this.name = name;
@@ -439,7 +439,7 @@ export class createSketchCommand {
 
   execute() {
     // 1. Build line geometry mesh
-    const rawMesh = buildSketchLine(this.points2D, this.basis, this.name);
+    const rawMesh = buildSketchLine(this.points2D, this.basis, this.curveSegments, this.name);
     
     // 2. Preserve or save the UUID across undo/redo cycles
     if (this.savedUuid) {
@@ -471,6 +471,66 @@ export class createSketchCommand {
   }
 }
 
+/**
+ * Applies an edit made via editSketch() (re-opening an already-finished sketch to add
+ * points/curves, drag existing ones, or fillet a corner) back onto that same sketch
+ * object. Unlike createSketchCommand, undo must restore the PRE-edit shape rather than
+ * just deleting the sketch entirely - so both the old and new states are snapshotted
+ * up front.
+ */
+export class updateSketchCommand {
+  constructor(sketchData, name) {
+    const existingMesh = sketchData.editingMesh;
+
+    this.newPoints2D = sketchData.points2D;
+    this.newCurveSegments = sketchData.curveSegments;
+    this.newBasis = sketchData.basis;
+
+    this.name = name || existingMesh.name;
+    this.sketchUuid = existingMesh.uuid;
+
+    // Snapshot the pre-edit state so undo can restore it exactly.
+    this.oldPoints2D = existingMesh.userData.points2D.map((p) => p.clone());
+    this.oldCurveSegments = cloneCurveSegments(existingMesh.userData.curveSegments);
+    this.oldBasis = {
+      u: existingMesh.userData.basis.u.clone(),
+      v: existingMesh.userData.basis.v.clone(),
+      normal: existingMesh.userData.basis.normal.clone(),
+      origin: existingMesh.userData.basis.origin.clone()
+    };
+
+    this.mesh = null;
+    clearRedoStack();
+    this.execute();
+  }
+
+  execute() {
+    const liveMesh = getMesh(this.sketchUuid);
+    if (liveMesh) deleteObjects([liveMesh]);
+
+    const rawMesh = buildSketchLine(this.newPoints2D, this.newBasis, this.newCurveSegments, this.name);
+    rawMesh.uuid = this.sketchUuid;
+
+    this.mesh = instantiateObject(rawMesh, this.name, true, false, true);
+    deselectObjects();
+    selectObjects([this.mesh]);
+  }
+
+  undo() {
+    const liveMesh = getMesh(this.sketchUuid);
+    if (liveMesh) deleteObjects([liveMesh]);
+
+    const rawMesh = buildSketchLine(this.oldPoints2D, this.oldBasis, this.oldCurveSegments, this.name);
+    rawMesh.uuid = this.sketchUuid;
+
+    this.mesh = instantiateObject(rawMesh, this.name, true, false, true);
+    deselectObjects();
+    selectObjects([this.mesh]);
+
+    redoStack.push(this);
+  }
+}
+
 export class extrudeSketchCommand {
   constructor(sketchMesh, depth, symmetric = false, resultName = 'Extruded Part') {
     this.sketchMesh = sketchMesh;
@@ -479,6 +539,7 @@ export class extrudeSketchCommand {
     this.resultName = resultName;
 
     this.points2D = sketchMesh.userData.points2D;
+    this.curveSegments = sketchMesh.userData.curveSegments;
     this.basis = getWorldBasis(sketchMesh);
     this.sketchUuid = sketchMesh.uuid;
     this.sketchName = sketchMesh.name;
@@ -497,7 +558,7 @@ export class extrudeSketchCommand {
     }
 
     // 2. Extrude new 3D mesh
-    const rawMesh = extrudeSketchMesh(this.points2D, this.basis, this.depth, this.symmetric);
+    const rawMesh = extrudeSketchMesh(this.points2D, this.basis, this.curveSegments, this.depth, this.symmetric);
     if (this.savedExtrudeUuid) {
       rawMesh.uuid = this.savedExtrudeUuid;
     }
@@ -518,7 +579,7 @@ export class extrudeSketchCommand {
     }
 
     // 2. Re-create 2D sketch with restored UUID
-    const restoredSketch = buildSketchLine(this.points2D, this.basis, this.sketchName);
+    const restoredSketch = buildSketchLine(this.points2D, this.basis, this.curveSegments, this.sketchName);
     restoredSketch.uuid = this.sketchUuid;
     selectObjects([restoredSketch]);
 
@@ -534,6 +595,7 @@ export class revolveSketchCommand {
     this.resultName = resultName;
 
     this.points2D = sketchMesh.userData.points2D;
+    this.curveSegments = sketchMesh.userData.curveSegments;
     this.basis = getWorldBasis(sketchMesh);
     this.sketchUuid = sketchMesh.uuid;
     this.sketchName = sketchMesh.name;
@@ -552,7 +614,7 @@ export class revolveSketchCommand {
     }
 
     // 2. Revolve new 3D mesh
-    const rawMesh = revolveSketchMesh(this.points2D, this.basis, this.angle, this.segments);
+    const rawMesh = revolveSketchMesh(this.points2D, this.basis, this.curveSegments, this.angle, this.segments);
     if (this.savedRevolveUuid) {
       rawMesh.uuid = this.savedRevolveUuid;
     }
@@ -573,7 +635,7 @@ export class revolveSketchCommand {
     }
 
     // 2. Re-create 2D sketch with restored UUID
-    const restoredSketch = buildSketchLine(this.points2D, this.basis, this.sketchName);
+    const restoredSketch = buildSketchLine(this.points2D, this.basis, this.curveSegments, this.sketchName);
     restoredSketch.uuid = this.sketchUuid;
     selectObjects([restoredSketch]);
 

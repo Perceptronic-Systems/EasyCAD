@@ -152,6 +152,23 @@ transformControls.addEventListener('dragging-changed', (e) => {
     cameraControls.active = !e.value;
 });
 
+/**
+ * Detaches a mesh from the transform-controls group back to the scene.
+ *
+ * For ordinary meshes (primitives, etc.) this is just scene.attach(), which preserves
+ * the mesh's world transform by decomposing it into position/rotation/scale.
+ *
+ * Sketch/extrude/revolve meshes are different: their geometry already stores absolute
+ * world-space coordinates with an identity object transform (see sketch_tools.js). If we
+ * let scene.attach() decompose the group's transform into position/rotation/scale on
+ * these meshes, that transform would then get re-applied on TOP of the already-absolute
+ * geometry the next time the mesh is grouped/scaled - and since the geometry isn't
+ * centered on the mesh's local origin, that scaling happens relative to the world origin,
+ * not the mesh's own center. Each reselect/rescale cycle compounds the error further.
+ *
+ * Instead, for these meshes we bake the current world matrix directly into the geometry
+ * and reset the object transform to identity, so every session starts from a clean slate.
+ */
 function detachFromGroup(group, mesh) {
   if (mesh.userData && mesh.userData.bakedWorldGeometry && mesh.geometry) {
     group.updateMatrixWorld(true);
@@ -183,6 +200,15 @@ function detachFromGroup(group, mesh) {
   }
 }
 
+/**
+ * A sketch's plane is always axis-aligned when created (see setSketchPlane), so its
+ * normal is exactly one of the world unit axes. Scaling along that axis doesn't
+ * correspond to anything on a flat 2D profile - it just stretches the "thickness"
+ * of something that has none - and later gets baked into extrude/revolve depth,
+ * producing an oversized or undersized solid. This returns which world axis ('x',
+ * 'y', or 'z') should be locked to 1 for a given sketch mesh, or null if it doesn't
+ * apply (not a sketch, or its normal isn't cleanly aligned to a single world axis).
+ */
 export function getSketchLockedAxis(mesh) {
   if (!mesh || !mesh.userData || !mesh.userData.isSketch) return null;
 

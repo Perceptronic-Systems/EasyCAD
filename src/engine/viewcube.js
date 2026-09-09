@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { camera, cameraControls } from './camera.js';
 import { loader } from './cad_tools.js';
-import { MeshStandardMaterial } from 'three/webgpu';
-const viewcubeUrl = './viewcube.glb';
+import { Timer } from 'three/examples/jsm/misc/Timer.js';
+const viewcubeUrl = '/viewcube.glb';
 
 let isDragging = false;
 let startPointerX = 0;
@@ -41,9 +41,11 @@ loader.load(viewcubeUrl, (gltf) => {
     viewCube = child;
     viewCube.name = 'viewcube'
     viewCube.scale.set(0.9, 0.9, 0.9);
-    viewCube.material = new MeshStandardMaterial({color: 0x919599});
+    viewCube.material = new THREE.MeshStandardMaterial({color: 0x919599});
     cubeScene.add(viewCube);
   })
+}, undefined, (error) => {
+  console.warn(`View cube model failed to load from "${viewcubeUrl}" - make sure viewcube.glb is in the public/ folder. The rest of the app still works without it.`, error);
 });
 
 
@@ -129,7 +131,7 @@ function onCubePointerUp(event) {
   const totalDistance = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
 
   // IF they barely moved, process this run as a standard quick face-alignment snap click!
-  if (totalDistance <= CLICK_THRESHOLD) {
+  if (totalDistance <= CLICK_THRESHOLD && viewCube) {
     rect = viewcubeCanvas.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -156,7 +158,7 @@ let startPhi = 0, startTheta = 0;
 let targetPhi = 0, targetTheta = 0;
 let progress = 0;
 const ANIMATION_DURATION = 0.3; // Duration in seconds
-const timer = new THREE.Timer(); // Tracks delta time across frames
+const timer = new Timer(); // Tracks delta time across frames
 
 function rotateMainCameraTo(direction) {
   startPhi = cameraControls.phi;

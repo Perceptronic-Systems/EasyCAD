@@ -8,7 +8,6 @@ import { ADDITION, SUBTRACTION, INTERSECTION, Brush, Evaluator } from 'three-bvh
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { AxesHelper } from 'three/webgpu';
 
 export let activeTool = null;
 export const loader = new GLTFLoader();

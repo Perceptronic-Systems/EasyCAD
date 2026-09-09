@@ -17,7 +17,6 @@ import {
 } from './cad_tools.js';
 
 import { 
-  editorControls, 
   setTool, 
   unselectTool, 
   updateTransform,  
@@ -27,7 +26,8 @@ import {
   finishSketch, 
   cancelSketch, 
   undoLastPoint, 
-  isSketchActive
+  isSketchActive,
+  applyFillet
 } from './sketch_tools.js';
 
 import { 
@@ -42,6 +42,7 @@ import {
   extrudeSketchCommand,
   revolveSketchCommand,
   createSketchCommand,
+  updateSketchCommand,
   addImageReferenceCommand
 } from './commands.js';
 
@@ -51,6 +52,11 @@ import {
 
 export const canvas = document.querySelector('#bg');
 export const camSelector = document.querySelector('#cam-switch');
+// EditorPanel.jsx renders this div reactively, but it's the same stable DOM node
+// throughout (React reuses it across store updates) - grabbing it once here to attach
+// the delegated input/change listener below works exactly like it did when this was a
+// static element in index.html.
+const editorControls = document.querySelector('#editor-controls');
 let cameraOrtho = true;
 
 // ==========================================
@@ -132,13 +138,20 @@ document.addEventListener('click', (event) => {
 
     // --- Undo / Redo ---
     case 'undo-button':
-      if (undoStack.length > 0) {
+      if (isSketchActive()) {
+        // While actively sketching, Undo always means "step back one sketch point" -
+        // popping the global stack instead could delete/modify the very sketch (or an
+        // unrelated object) out from under the active session.
+        undoLastPoint();
+      } else if (undoStack.length > 0) {
         undo();
         updateUndoRedoButtons();
       }
       break;
     case 'redo-button':
-      if (redoStack.length > 0) {
+      // Redo has no sketch-specific meaning, so it's simply disabled mid-sketch rather
+      // than touching the global stack while a session is active.
+      if (!isSketchActive() && redoStack.length > 0) {
         redo();
         updateUndoRedoButtons();
       }
@@ -282,6 +295,14 @@ document.addEventListener('click', (event) => {
       document.dispatchEvent(new CustomEvent('sketch-request-finish'));
       break;
 
+    case 'apply-fillet': {
+      const radius = Number(document.querySelector('#sketch-fillet-radius')?.value) || 0;
+      if (radius <= 0 || !applyFillet(radius)) {
+        alert('Could not apply fillet - select a straight interior corner (click a point while in Fillet mode) and a radius that fits between its neighboring points.');
+      }
+      break;
+    }
+
     case 'apply-extrude':
       handleExtrudeApply();
       break;
@@ -407,7 +428,11 @@ function exportSelectedToSTL() {
 document.addEventListener('sketch-request-finish', () => {
   const sketchData = finishSketch();
   if (sketchData) {
-    undoStack.push(new createSketchCommand(sketchData, 'Sketch'));
+    if (sketchData.editingMesh) {
+      undoStack.push(new updateSketchCommand(sketchData, sketchData.editingMesh.name));
+    } else {
+      undoStack.push(new createSketchCommand(sketchData, 'Sketch'));
+    }
     updateUndoRedoButtons();
     unselectTool();
   }
@@ -415,6 +440,15 @@ document.addEventListener('sketch-request-finish', () => {
 
 // Hotkey Listeners
 document.addEventListener('keydown', (e) => {
+  // While actively sketching, Ctrl+Z always means "undo the last sketch point" - handle
+  // it before the input-focus check below, so it isn't swallowed by the browser's native
+  // per-field undo just because a panel input (e.g. Grid Snap, Fillet Radius) has focus.
+  if (e.ctrlKey && e.key.toLowerCase() === 'z' && isSketchActive()) {
+    e.preventDefault();
+    undoLastPoint();
+    return;
+  }
+
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
   if (e.key === 'Escape') {
@@ -424,9 +458,7 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (e.ctrlKey && e.key.toLowerCase() === 'z') {
-    if (isSketchActive()) {
-      undoLastPoint();
-    } else if (e.shiftKey) {
+    if (e.shiftKey) {
       if (redoStack.length > 0) {
         redo();
         updateUndoRedoButtons();

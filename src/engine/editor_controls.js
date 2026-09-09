@@ -1,5 +1,5 @@
-import { color } from "three/tsl";
 import { scene } from './camera.js';
+import { editorPanelStore } from '../store.js';
 import { 
   selectedObjects, 
   setActiveTool, 
@@ -19,122 +19,27 @@ import { transformControls, activateTransformControls, deactivateTransformContro
 import { snap, radToDeg, degToRad, getSize, setSize, updateSnap, clampLockedScaleAxis } from './transform_controls.js';
 
 import * as THREE from 'three';
-import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh, setGridSnapAmount, getGridSnapAmount, getWorldBasis } from './sketch_tools.js';
+import { startSketch, finishSketch, cancelSketch, undoLastPoint, isSketchActive, setSketchPlane, extrudeSketchMesh, revolveSketchMesh, setGridSnapAmount, getGridSnapAmount, getWorldBasis, editSketch, isEditingExistingSketch, setDrawMode, getDrawMode, setSmartSnapEnabled, getSmartSnapEnabled, applyFillet, setFilletPreviewRadius } from './sketch_tools.js';
 
 const defaultSelection = 'nothing selected';
 export const selectionText = document.querySelector("#selected");
 updateSelectionText();
 
 // Editor controls functionality
-export const editorControls = document.querySelector("#editor-controls");
-editorControls.style.display = 'None';
-
+//
+// setEditor() used to hand-build the panel's DOM (createElement/appendChild) into a
+// static #editor-controls div. That's now EditorPanel.jsx's job - it renders the same
+// DOM structure (same ids/classes) declaratively from whatever field array is passed
+// here. Everything below that reads/writes those fields (updateTransform,
+// updateEditorControls) is untouched: it still just does document.querySelector('#id'),
+// which works identically whether React or vanilla JS created the element.
 export function setEditor(content_items) {
-  let focusedElement = null;
-  for (const item of content_items) {
-    let domElement;
-    if (item.element == "property") {
-      domElement = document.createElement('div');
-      domElement.classList.add('row');
-      const label = document.createElement('span');
-      const value = document.createElement('input');
-      label.textContent = item.content;
-      label.id = "label-" + item.id;
-      value.id = item.id;
-      value.classList.add('property');
-      value.value = item.defaultValue;
-      domElement.appendChild(label);
-      domElement.appendChild(value);
-      if (item.unit) {
-        const unit = document.createElement('span');
-        unit.textContent = item.unit;
-        unit.classList.add('unit');
-        domElement.appendChild(unit);
-      }
-    } else if (item.element == "dropdown") {
-      domElement = document.createElement('div');
-      domElement.classList.add('row');
-      
-      if (item.content) {
-        const label = document.createElement('span');
-        label.textContent = item.content;
-        label.id = "label-" + item.id;
-        domElement.appendChild(label);
-      }
-
-      const select = document.createElement('select');
-      select.id = item.id;
-      select.classList.add('dropdown-menu');
-
-      if (item.options && Array.isArray(item.options)) {
-        for (const optionText of item.options) {
-          const option = document.createElement('option');
-          option.value = optionText;
-          option.textContent = optionText;
-          if (optionText === item.defaultValue) {
-            option.selected = true;
-          }
-          select.appendChild(option);
-        }
-      }
-      domElement.appendChild(select);
-    } else if (item.element == "color-picker") {
-      domElement = document.createElement('div');
-      domElement.classList.add('row');
-      const picker = document.createElement('input');
-      picker.type = 'color';
-      picker.id = item.id;
-      picker.value = getObjectColor();
-      domElement.appendChild(picker);
-    } else if (item.element == "checkbox") {
-      domElement = document.createElement('div');
-      domElement.classList.add('row');
-      const label = document.createElement('label');
-      label.textContent = item.content;
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = item.id;
-      checkbox.checked = item.defaultValue;
-      domElement.appendChild(label);
-      domElement.appendChild(checkbox);
-    } else if (item.element == "title") {
-      domElement = document.createElement('div');
-      domElement.classList.add('row');
-      const close = document.createElement('button');
-      const title = document.createElement('h3');
-      title.textContent = item.defaultValue;
-      close.id = 'close-window';
-      close.textContent = '×';
-      close.classList.add('close');
-      domElement.appendChild(title);
-      domElement.appendChild(close);
-    } else if (item.element == "confirmation") {
-      domElement = document.createElement('div');
-      domElement.classList.add('row');
-      const apply = document.createElement('button');
-      apply.id = item.id;
-      apply.classList.add('apply');
-      apply.innerHTML = "Apply";
-      domElement.appendChild(apply);
-    } else {
-      domElement = document.createElement(item.element);
-      if (item.id) domElement.id = item.id;
-      if (item.class) domElement.classList.add(item.class);
-      domElement.innerHTML = item.content;
-    }
-    if (item.focused) {
-      focusedElement = item.id;
-    }
-    editorControls.appendChild(domElement);
-  }
-  editorControls.style.display = 'flex';
-
-  if (focusedElement) document.getElementById(focusedElement).focus();
+  editorPanelStore.set(content_items);
 }
 
 export function setTool(tool) {
   if (activeTool === tool) return;
-  editorControls.innerHTML = "";
+  editorPanelStore.set(null);
   const selection = Object.values(selectedObjects);
   
   if (activeTool != tool && (selection.length > 0 || tool === 'paint' || tool === 'sketch')) {
@@ -170,7 +75,7 @@ export function setTool(tool) {
         break;
       case "paint":
         setEditor([{ element: 'title', defaultValue: 'Color Picker' },
-          { element: 'color-picker', id: 'color-picker' }
+          { element: 'color-picker', id: 'color-picker', defaultValue: getObjectColor() }
         ]);
         deactivateTransformControls();
         break;
@@ -194,19 +99,39 @@ export function setTool(tool) {
         ]);
         updateTransform();
         break;
-      case "sketch":
+      case "sketch": {
+        const sketchSelection = Object.values(selectedObjects);
+        const existingSketch = (sketchSelection.length === 1 && sketchSelection[0].userData && sketchSelection[0].userData.isSketch)
+          ? sketchSelection[0]
+          : null;
+
         setEditor([
-          { element: 'title', defaultValue: 'Draw Sketch' },
+          { element: 'title', defaultValue: existingSketch ? 'Edit Sketch' : 'Draw Sketch' },
           { element: 'dropdown', content: 'Plane', id: 'sketch-plane', defaultValue: 'XZ', options: ['XZ', 'XY', 'YZ'] },
           { element: 'property', content: 'Offset', id: 'sketch-offset', defaultValue: 0, unit: 'mm' },
           { element: 'property', content: 'Grid Snap', id: 'sketch-grid-snap', defaultValue: getGridSnapAmount(), unit: 'mm' },
-          { element: 'confirmation', id: 'finish-sketch-btn' }
+          { element: 'checkbox', content: 'Smart Snap', id: 'sketch-smart-snap', defaultValue: getSmartSnapEnabled() },
+          { element: 'dropdown', content: 'Draw Mode', id: 'sketch-draw-mode', defaultValue: 'Line', options: ['Line', 'Arc', 'Bezier', 'Fillet'] },
+          { element: 'property', content: 'Fillet Radius', id: 'sketch-fillet-radius', defaultValue: 5, unit: 'mm' },
+          { element: 'confirmation', id: 'apply-fillet', content: 'Apply Fillet' },
+          { element: 'confirmation', id: 'finish-sketch-btn', content: existingSketch ? 'Update' : 'Finish' }
         ]);
-        const plane = document.querySelector('#sketch-plane').value;
-        const offset = Number(document.querySelector('#sketch-offset').value) || 0;
+
         setGridSnapAmount(document.querySelector('#sketch-grid-snap').value);
-        startSketch(plane, offset);
+        setSmartSnapEnabled(document.querySelector('#sketch-smart-snap').checked);
+        setDrawMode(document.querySelector('#sketch-draw-mode').value.toLowerCase());
+
+        if (existingSketch) {
+          // Plane/Offset don't apply when editing - the sketch keeps its own (possibly
+          // transformed) basis rather than being redefined from those dropdowns.
+          editSketch(existingSketch);
+        } else {
+          const plane = document.querySelector('#sketch-plane').value;
+          const offset = Number(document.querySelector('#sketch-offset').value) || 0;
+          startSketch(plane, offset);
+        }
         break;
+      }
       case "extrude": {
         const selectionList = Object.values(selectedObjects);
         // Find sketch either by isSketch flag or sketch metadata
@@ -269,20 +194,20 @@ export function unselectTool() {
 }
 
 export function updateEditorControls() {
-  if (editorControls.innerHTML != "") {
+  if (editorPanelStore.get()) {
     switch (activeTool) {
       case "move":
-        const x_pos = editorControls.querySelector('#pos-x');
-        const y_pos = editorControls.querySelector('#pos-y');
-        const z_pos = editorControls.querySelector('#pos-z');
+        const x_pos = document.querySelector('#pos-x');
+        const y_pos = document.querySelector('#pos-y');
+        const z_pos = document.querySelector('#pos-z');
         x_pos.value = selectionGroup.position.x;
         y_pos.value = selectionGroup.position.y;
         z_pos.value = selectionGroup.position.z;
         break;
       case "scale":
-        const x_size = editorControls.querySelector('#scale-x');
-        const y_size = editorControls.querySelector('#scale-y');
-        const z_size = editorControls.querySelector('#scale-z');
+        const x_size = document.querySelector('#scale-x');
+        const y_size = document.querySelector('#scale-y');
+        const z_size = document.querySelector('#scale-z');
         updateSnap(selectionGroup);
         const size = getSize(selectionGroup);
         x_size.value = size.x.toFixed(2);
@@ -290,15 +215,15 @@ export function updateEditorControls() {
         z_size.value = size.z.toFixed(2);
         break;
       case "rotate":
-        const x_rot = editorControls.querySelector('#rot-x');
-        const y_rot = editorControls.querySelector('#rot-y');
-        const z_rot = editorControls.querySelector('#rot-z');
+        const x_rot = document.querySelector('#rot-x');
+        const y_rot = document.querySelector('#rot-y');
+        const z_rot = document.querySelector('#rot-z');
         x_rot.value = radToDeg(selectionGroup.rotation.x);
         y_rot.value = radToDeg(selectionGroup.rotation.y);
         z_rot.value = radToDeg(selectionGroup.rotation.z);
         break;
       case "paint":
-        const color_picker = editorControls.querySelector('#color-picker');
+        const color_picker = document.querySelector('#color-picker');
         color_picker.value = getObjectColor();
         break;
     }
@@ -310,6 +235,10 @@ transformControls.addEventListener('objectChange', (event) => {
   updateSnap(selectionGroup);
   clampLockedScaleAxis(selectionGroup, selectedObjects);
   transformHelper.update();
+});
+
+document.addEventListener('sketch-fillet-target-changed', () => {
+  if (activeTool === 'sketch') updateTransform();
 });
 
 export function updateTransform() {
@@ -365,10 +294,10 @@ export function updateTransform() {
       const selectedSketch = Object.values(selectedObjects).find(m => m.userData && m.userData.isSketch);
       if (!selectedSketch) break;
 
-      const { points2D } = selectedSketch.userData;
+      const { points2D, curveSegments } = selectedSketch.userData;
       const basis = getWorldBasis(selectedSketch);
 
-      const previewMesh = extrudeSketchMesh(points2D, basis, depth, symmetric);
+      const previewMesh = extrudeSketchMesh(points2D, basis, curveSegments, depth, symmetric);
       
       previewMesh.userData.tag = 'preview';
       previewMesh.name = selectedSketch.name + " Preview";
@@ -379,13 +308,25 @@ export function updateTransform() {
       break;
     }
     case 'sketch': {
-      const plane = document.querySelector('#sketch-plane')?.value || 'XZ';
-      const offset = Number(document.querySelector('#sketch-offset')?.value) || 0;
       const gridSnap = document.querySelector('#sketch-grid-snap')?.value;
+      const smartSnap = document.querySelector('#sketch-smart-snap')?.checked;
+      const mode = document.querySelector('#sketch-draw-mode')?.value?.toLowerCase();
 
-      // Re-configure sketch plane and auto-adjust the view camera
-      setSketchPlane(plane, offset);
+      // Plane/Offset only apply to a brand-new sketch - an edit session keeps whatever
+      // (possibly transformed) basis the sketch already had, so re-running
+      // setSketchPlane here would silently discard that.
+      if (!isEditingExistingSketch()) {
+        const plane = document.querySelector('#sketch-plane')?.value || 'XZ';
+        const offset = Number(document.querySelector('#sketch-offset')?.value) || 0;
+        setSketchPlane(plane, offset);
+      }
+
       setGridSnapAmount(gridSnap);
+      setSmartSnapEnabled(smartSnap);
+      if (mode) setDrawMode(mode);
+
+      const filletRadius = Number(document.querySelector('#sketch-fillet-radius')?.value) || 0;
+      setFilletPreviewRadius(filletRadius);
       break;
     }
     case 'revolve': {
@@ -397,10 +338,10 @@ export function updateTransform() {
       const selectedSketch = Object.values(selectedObjects).find(m => m.userData && m.userData.isSketch);
       if (!selectedSketch) break;
 
-      const { points2D } = selectedSketch.userData;
+      const { points2D, curveSegments } = selectedSketch.userData;
       const basis = getWorldBasis(selectedSketch);
 
-      const previewMesh = revolveSketchMesh(points2D, basis, angle, segments);
+      const previewMesh = revolveSketchMesh(points2D, basis, curveSegments, angle, segments);
 
       previewMesh.userData.tag = 'preview';
       previewMesh.name = selectedSketch.name + " Preview";
@@ -415,8 +356,7 @@ export function updateTransform() {
 }
 
 export function hideEditor() {
-  editorControls.style.display = "none";
-  editorControls.innerHTML = "";
+  editorPanelStore.set(null);
 }
 
 export function updateSelectionText() {

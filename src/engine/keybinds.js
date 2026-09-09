@@ -1,11 +1,14 @@
-import { remove } from "three/examples/jsm/libs/tween.module.js";
 import { selectAll, copy, deselectObjects, booleanToSelection, removeSelected, selectedObjects, shiftDown, ctrlDown } from "./cad_tools.js";
 import { undo, redo, undoStack, redoStack, paste, addObject, removeObjects, combineObjects } from './commands.js';
-import { unselectTool, setTool, editorControls } from "./editor_controls.js";
-import { isSketchActive, undoLastPoint } from './sketch_tools.js';
-import { updateUndoRedoButtons } from './buttons.js';
+import { unselectTool, setTool } from "./editor_controls.js";
+import { isSketchActive, undoLastPoint, cancelSketch } from './sketch_tools.js';
+import { updateUndoRedoButtons } from './interactions.js';
 
 const primativesDropdown = document.getElementById('primatives-dropdown');
+// EditorPanel.jsx renders this reactively but it's the same stable DOM node throughout
+// (see interactions.js for the same pattern) - grabbing it once here is equivalent to
+// the editorControls export this file used to import from editor_controls.js.
+const editorControls = document.querySelector('#editor-controls');
 
 document.addEventListener('keydown', (event) => {
   const selection = Object.values(selectedObjects);
